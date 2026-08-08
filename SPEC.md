@@ -2,15 +2,18 @@
 
 **An additive profile of OKF v0.2.** Every ODFW document preserves OKF provenance and trust. OKF renderers may ignore ODFW fields and still display the documents.
 
+**Product intention (load-bearing):** see [INTENTION.md](INTENTION.md).  
+In one line: ODFW packages prove an **original spreadsheet** (explorer-pinned) against **bronze**, self-contained with **seeds** when needed, uncoupled from any metrics app, so a complete pack can later be compiled into an analytics metrics package.
+
 ```text
 OKF  — knowledge and trust
 EMF  — human intent and durable memory
 ORF  — approved research and graded findings
 OPF  — product commitments, experience, slices, and proof
-ODFW — warehouse topology, contracts, lineage, quality evidence, and ownership
+ODFW — spreadsheet → bronze proof packages (topology, recipes, seeds, checks, results)
 ```
 
-ODFW composes these formats; it does not merge them. Human intent remains EMF. Research remains ORF. Product surfaces remain OPF. ODFW owns the portable description of a data warehouse as an inspectable system: what sources land, what layers mean, which plane is the oracle, how metrics are contracted, how proof is produced, and who may touch what.
+ODFW composes these formats; it does not merge them. Human intent remains EMF. Research remains ORF. Product surfaces remain OPF. ODFW owns the portable **spreadsheet→bronze** proof graph: pinned workbook, bronze oracle, recipes/sql-packets, seeds, checks, tests, results, and operating boundaries.
 
 If a requirement conflicts with OKF v0.2, **OKF wins for base structure**. ODFW only adds required frontmatter, pack layout conventions, warehouse concept kinds, and biting gates.
 

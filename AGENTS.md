@@ -1,17 +1,28 @@
 # Open Data Warehouse Format
 
-ODFW is an additive OKF profile, not a warehouse, credentials store, or metric database.
+ODFW is an additive OKF profile for **spreadsheet → bronze** proof packages — not a warehouse engine, credentials store, or metrics UI.
 
-- Preserve OKF v0.2 trust and provenance.
-- Name exactly one **oracle** layer; for source-complete warehouses that is often **bronze**. Gold is under test.
-- Prefer **live catalog names** (`information_schema`) over registry/MCP table strings.
-- Metric proof compares **vectors** under a ratified `metric-contract`, not lucky scalars.
-- Exclusion sets and entity maps are concepts; do not re-derive gold while ignoring them.
-- Credentials never appear in pack documents — only `credential-plane` locators.
-- Serving planes declare what they are *not* authoritative for (catalog/cache/MCP honesty).
-- Link EMF intent and ORF research; do not impersonate either.
-- Concepts are atomic, IDs stable, references resolvable, membership via directed composition edges.
-- Add a field or rule only for an observed failure; keep the validator stdlib-only.
-- Run `python3 -m odfw.validate --strict` before calling a pack published.
-- **Never commit private warehouse packs here.** Real packs (hosts, providers, recipes, customer metrics, SQL, results) belong in private org repos. This repo stays format + fictional fixtures only.
-- Build the **language** toward [V1.md](V1.md): sql-packet, check, test, result, workbook/answer-key pins to eidos-spreadsheet-explorer. Private packs carry instance TARGET files.
+## Intention
+
+Read **[INTENTION.md](INTENTION.md)** first. Summary:
+
+- Prove the **original pinned spreadsheet** (explorer export) against **bronze**.  
+- Deliver packs **self-contained**, including **seeds** when bronze cannot honest-claim a cell.  
+- Do **not** couple packs to GreenmarkSheets or any other product — learn patterns only.  
+- **Gold / MCP / registry values** are not the prove path (gold later / under test).  
+- A complete pack is the **compile input** for an AI-built analytics metrics package.
+
+## Rules
+
+- Preserve OKF v0.2 trust and provenance.  
+- Name exactly one **oracle** layer for this prove path — typically **bronze**.  
+- Prefer live catalog names (`information_schema`) over registry/MCP table strings.  
+- Metric proof compares **vectors** under a contract, not lucky scalars.  
+- Exclusion sets, entity maps, and **seeds** are first-class; never launder seeds as bronze.  
+- Credentials never appear in pack documents — only `credential-plane` locators.  
+- Serving planes declare what they are *not* authoritative for.  
+- Concepts atomic, IDs stable, directed composition membership.  
+- Add fields only for observed failures; validator stdlib-only for gates.  
+- `python3 -m odfw.validate --strict` before calling a pack published.  
+- **Never commit private warehouse packs here.**  
+- Language roadmap: [V1.md](V1.md). Connectors: [TESTING-AND-CONNECTORS.md](TESTING-AND-CONNECTORS.md).  
