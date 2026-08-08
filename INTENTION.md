@@ -7,7 +7,7 @@
 
 ## One sentence
 
-ODFW is the open format for **self-contained packages that prove an original spreadsheet against bronze warehouse data** — so a completed pack is simple, falsifiable, and rich enough that an AI can later compile it into a full analytics metrics package.
+ODFW is the open format for **self-contained packages that prove an original spreadsheet against bronze warehouse data, by cell**, with **quality scores** in the schema — so a completed pack is simple, falsifiable, and rich enough that an AI can later compile it into a full analytics metrics package.
 
 ---
 
@@ -49,11 +49,19 @@ Patterns may be **learned** from prior reconciles; the pack must not **couple** 
 
 ---
 
+## Atomic unit: the cell
+
+Proof is **by-cell**, not by-row and not only by metric.
+
+- Identity ties a cell to the pinned workbook (and/or logical metric key — pack-defined).
+- Recipes, seeds, checks, and results attach to **cells** (or cell sets only as derived views).
+- **Quality scoring** is first-class in the schema (per cell claim and/or result), so honesty caps (e.g. seed/manual vs bronze) can be enforced without tribal GMS-only knowledge.
+
 ## Why this is simpler and more provable
 
 Two sides only for the core claim. Falsifiable in one sentence:
 
-> For this sheet vector (explorer facts @ md5), bronze re-derives the same numbers within tolerance — or the cell is **seed** / **NOT_DERIVABLE** with reason.
+> For this **cell** (explorer facts @ workbook md5 + address/key), bronze re-derives the same number within tolerance — or the cell is **seed** / **NOT_DERIVABLE** with reason — and a **quality score** records how strong that claim is.
 
 No “gold is green,” no “the dashboard agreed,” no product-UI false green.
 
