@@ -19,6 +19,7 @@ Read **[INTENTION.md](INTENTION.md)** first. Summary:
 - Prefer live catalog names (`information_schema`) over registry/MCP table strings.  
 - Metric proof compares **vectors** under a contract, not lucky scalars.  
 - **Spreadsheet-derived metrics:** prove **row-first** across the relevant date range (period ascending); retain one metric’s definition/authority/calc context; one result per cell; **classify** non-calc periods explicitly (SPEC §8a). Not column-first thrash. Prospective + current path — no bulk rewrite of old results.  
+- **Incomplete warehouse years (e.g. 2025):** expect missing bronze; look up the pack’s **designated complementary source** (often GMS) **before** FAIL/DQ-blocker. Record whether GMS (or equivalent) supplied evidence. Non-calc outcomes only for true structural/N/A periods — never to skip the GMS lookup. If neither source works: open blocker naming missing source/credential/definition.  
 - Exclusion sets, entity maps, and **seeds** are first-class; never launder seeds as bronze.  
 - Credentials never appear in pack documents — only `credential-plane` locators.  
 - Serving planes declare what they are *not* authoritative for.  

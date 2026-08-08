@@ -6,6 +6,7 @@
 - Rationale: column-first thrash; row keeps definition/authority/calc context across the series
 - Result outcomes: `NOT_APPLICABLE`, `SOURCE_ONLY`, `CARRIED_STRUCTURAL`; optional `non_calc_class`
 - Validator accepts new outcomes; requires `notes` for non-calc (warn / strict error)
+- **§8a.5** — incomplete warehouse years: consult **designated complementary source** (e.g. GMS) before FAIL on empty bronze; record present/absent; non-calc ≠ skipped GMS lookup
 - Prospective + current path only — no bulk migration of historical results
 - INTENTION + AGENTS cross-links
 

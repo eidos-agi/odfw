@@ -436,10 +436,13 @@ fidelity: unknown            # source | derivative | unknown | …
 2. **Retain row context.** Keep that metric’s definition, authority mapping (tables/maps/exclusions), and calculation/recipe shape loaded for the full series; retrieve the period series together where feasible; reuse the proof pattern across periods.
 3. **Per-cell evidence.** Each logical cell (`metric_id` + `period` / address as defined by the pack) gets its **own** append-only `result` (and external work tracker card if the pack uses one). Efficiency is **shared row context**, not collapsing multiple periods into one result or one card.
 4. **Non-calc is classified.** Any period in range that does **not** require a bronze calculation MUST be recorded with an explicit classification — via `outcome` ∈ {`NOT_APPLICABLE`, `SOURCE_ONLY`, `CARRIED_STRUCTURAL`} and/or `non_calc_class` ∈ {`not_applicable`, `carried_structural`, `source_only`, `blank`, `forecast_out_of_window`} — plus a short reason in `notes`. Silent omission is a format violation for **new** work.
+5. **Complementary source before FAIL (warehouse gaps).** When the pack’s date range includes periods known to have **incomplete warehouse landings** (e.g. early calendar years before full bronze coverage), agents MUST consult the pack’s **designated complementary source** (instance-defined — often a per-cell reconcile store such as a `gms`-class schema) **before** labeling a cell `FAIL` or a data-quality blocker for “no warehouse rows.” Record on the cell result whether that complementary source supplied usable evidence (`complementary_source: present | absent | not_checked` + notes). If **neither** bronze nor the complementary source can support the cell, leave an honest open blocker naming the **missing source, credential, or definition** — not a fake calc and not a non-calc label.
+
+**Non-calc must not substitute for a required complementary lookup.** Use `NOT_APPLICABLE` / `SOURCE_ONLY` / `CARRIED_STRUCTURAL` only for periods that are truly structural / not applicable / source-only by definition — never as a euphemism for “bronze empty; we skipped GMS.”
 
 #### Rationale
 
-A **column** is one month across unrelated metrics: agents re-load source, definition, and calculation on every cell — high wrong-turn and token cost; series gaps and definition changes stay invisible. A **row** is one metric’s complete time-series story: authority and calc stay in context; definition drift, holes, and no-calc periods show as a single narrative.
+A **column** is one month across unrelated metrics: agents re-load source, definition, and calculation on every cell — high wrong-turn and token cost; series gaps and definition changes stay invisible. A **row** is one metric’s complete time-series story: authority and calc stay in context; definition drift, holes, and no-calc periods show as a single narrative. **Warehouse incompleteness** (common in early years of a cutover) is a **coverage** fact: complementary per-cell evidence (recipes, answer keys, quality) exists so agents do not treat empty bronze as a failed formula.
 
 #### Validation expectation
 
@@ -449,7 +452,8 @@ A **column** is one month across unrelated metrics: agents re-load source, defin
 | `non_calc_class` if present ∈ allowed set | **error** (validator) | Invalid class fails |
 | Non-calc `outcome` without `notes` (or empty notes) | **warn** (strict: **error**) | Force a reason string |
 | Pack prove order / historical column-first results | **not** auto-failed | Prospective + current path only; no bulk migration required |
-| Human/harness | Document row-first in pack `AGENTS` or decisions for new spreadsheet slices | Soft — not a face lifecycle blocker |
+| Complementary-source check before FAIL on empty bronze | **human/harness** | Pack AGENTS/decisions name the complementary source; result notes or `complementary_source` field record present/absent/not_checked |
+| Human/harness | Document row-first + complementary source for incomplete years in pack `AGENTS` | Soft — not a face lifecycle blocker |
 
 Private packs apply this **prospectively** on new spreadsheet→bronze work and on the **active** proof path. Prior May-column or mixed-order results remain valid historical evidence unless a pack chooses to supersede them.
 

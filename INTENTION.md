@@ -61,6 +61,8 @@ Proof is **by-cell**, not by-row and not only by metric.
 
 **Row-first, chronological periods** — not column-first month batches. Finish (or honestly block / classify) one metric’s series across the relevant date range with shared definition/authority/calc context; emit **one result per cell** in period order. Periods that do not need a calculation get an **explicit** non-calc classification, never a silent skip.
 
+When warehouse landings are incomplete for part of the range (e.g. substantial **2025** gaps in cutover programs), the pack’s **designated complementary source** (often a `gms`-class per-cell store) is part of the lookup path **before** treating empty bronze as a failed calculation. Non-calc labels are not a substitute for that lookup. If neither source supports the cell, open an honest blocker naming the missing source/credential/definition.
+
 Rationale and gates: public **SPEC §8a**. Cards/trackers (if used) stay per logical cell; efficiency is shared row context, not collapsed evidence.
 
 ## Why this is simpler and more provable
