@@ -164,11 +164,11 @@ That harness is package-local or `odfw-harness` — still not a new quality lang
 
 ## 8. Implementation order
 
-1. **Document** (this file) — done as target.  
-2. **SPEC**: `check.engine`, `data-contract`, connector fields on `host`.  
-3. **Pack layout**: `contracts/` with one ODCS YAML for a tiny table or metric grain; `servers` env-only.  
-4. **Harness script** in private pack: `scripts/prove-first-slice.sh` → validate + datacontract test + optional packet.  
-5. **Result adapter**: map datacontract JSON → ODFW `result` outcome.  
+1. **Document** (this file) — done.  
+2. **SPEC 0.2.2**: `check.engine`, `data-contract`, `connector` kinds — done.  
+3. **Pack**: `contracts/gl-entries-bronze.odcs.yaml` — done (private).  
+4. **Harness**: `scripts/prove-first-slice.sh` — done.  
+5. **Live prove**: 2026-08-08 **PASS** (15 checks, rowCount>0 on Cerebro bronze `gl_entries`).  
 6. **Optional**: export path to dbt tests for data-daemon-v5 CI.
 
 ---

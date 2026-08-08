@@ -1,4 +1,4 @@
-# ODFW v0.2.1 — Open Data Warehouse Format
+# ODFW v0.2.2 — Open Data Warehouse Format
 
 **An additive profile of OKF v0.2.** Every ODFW document preserves OKF provenance and trust. OKF renderers may ignore ODFW fields and still display the documents.
 
@@ -178,6 +178,8 @@ Allowed `kind` values:
 | `check` | Executable assertion (vector/peers/tolerance) |
 | `test` | Ordered procedure binding packets + checks |
 | `result` | Append-only observation of a test/check run |
+| `data-contract` | Pin to ODCS (or compatible) contract file + server id |
+| `connector` | Get-online adapter pin (odcs-server / datacontract / adbc / …) |
 
 IDs match `odfw:<warehouse>:<kind>:<slug>` (additional stable segments allowed), are unique in the validation closure, and **never change after publication**. A new interpretation gets a new ID and explicit `supersedes` / `superseded_by` (both edges, matching kinds, one live head).
 
@@ -352,6 +354,15 @@ posture: select-only             # required; writes forbidden
 The validator does **not** execute SQL. Harnesses do.
 
 ### Check
+
+```yaml
+kind: check
+engine: datacontract          # datacontract | dbt | great-expectations | soda | sql-packet | custom
+data_contract: odfw:…:data-contract:…
+bind: contracts/gl-entries-bronze.odcs.yaml
+```
+
+Or sql-packet triangulation:
 
 ```yaml
 kind: check
@@ -546,6 +557,6 @@ Issue trackers execute work. dbt owns model SQL. Dagster owns run history. EMF o
 
 | | |
 |---|---|
-| Profile | ODFW **0.2.1** |
+| Profile | ODFW **0.2.2** |
 | Base | OKF **0.2** |
 | Status | Draft — sql-packet / check / test / result / workbook pins; private packs dogfood |

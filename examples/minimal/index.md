@@ -1,6 +1,6 @@
 ---
 okf_version: "0.2"
-odfw_version: "0.2.1"
+odfw_version: "0.2.2"
 profile: odfw
 type: warehouse
 odfw_id: odfw:minimal:warehouse

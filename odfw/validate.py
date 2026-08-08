@@ -1,4 +1,4 @@
-"""Validate Open Data Warehouse Format v0.2.1 documents and packs.
+"""Validate Open Data Warehouse Format v0.2.2 documents and packs.
 
 Stdlib only. The parser accepts the deliberately small YAML subset ODFW specifies
 and fails closed on syntax it cannot represent faithfully.
@@ -51,6 +51,16 @@ KINDS = {
     "check",
     "test",
     "result",
+    "data-contract",
+    "connector",
+}
+CHECK_ENGINES = {
+    "datacontract",
+    "dbt",
+    "great-expectations",
+    "soda",
+    "sql-packet",
+    "custom",
 }
 STATUSES = {"inventory", "contracting", "implementing", "proving", "operating", "retired"}
 TIERS = {"human", "job", "agent"}
@@ -128,6 +138,10 @@ EDGE_TARGET_KINDS: dict[str, set[str]] = {
     "layer": {"layer"},
     "answer_key": {"answer-key", "workbook"},
     "metric_contract": {"metric-contract"},
+    "data_contract": {"data-contract"},
+    "data_contracts": {"data-contract"},
+    "connector": {"connector"},
+    "connectors": {"connector"},
     "inputs": {"table", "schema", "exclusion-set", "entity-map", "seed", "answer-key", "workbook"},
 }
 REF_FIELDS = set(EDGE_TARGET_KINDS)
@@ -671,8 +685,15 @@ def validate_docs(
                     if re.search(r"(?im)^\s*(insert|update|delete|drop|alter|truncate|create)\b", text):
                         report.add("error", "sql.write", f"{sql_path}: write/DDL SQL forbidden")
         if kind == "check":
+            engine = doc.meta.get("engine")
+            if engine is not None and engine not in CHECK_ENGINES:
+                report.add(
+                    "error",
+                    "check.engine",
+                    f"{doc.path.name}: engine must be one of {sorted(CHECK_ENGINES)}",
+                )
             compare = doc.meta.get("compare")
-            if compare not in COMPARE_MODES:
+            if compare is not None and compare not in COMPARE_MODES:
                 report.add("error", "check.compare", f"{doc.path.name}: compare must be vector|scalar")
             elif compare == "scalar" and status == "operating":
                 report.add(
@@ -680,8 +701,51 @@ def validate_docs(
                     "check.scalar",
                     f"{doc.path.name}: scalar compare forbidden for operating packs under strict",
                 )
-            if not _refs(doc.meta.get("metric_contract")) and not _refs(doc.meta.get("sql_packet")):
-                report.add("error", "check.target", f"{doc.path.name}: metric_contract or sql_packet required")
+            has_target = (
+                _refs(doc.meta.get("metric_contract"))
+                or _refs(doc.meta.get("sql_packet"))
+                or _refs(doc.meta.get("data_contract"))
+                or (
+                    isinstance(doc.meta.get("bind"), str)
+                    and not _is_placeholder(doc.meta.get("bind"))
+                )
+            )
+            if not has_target:
+                report.add(
+                    "error",
+                    "check.target",
+                    f"{doc.path.name}: metric_contract, sql_packet, data_contract, or bind required",
+                )
+            if engine == "datacontract" and not (
+                _refs(doc.meta.get("data_contract"))
+                or (isinstance(doc.meta.get("bind"), str) and str(doc.meta.get("bind")).endswith((".yaml", ".yml")))
+            ):
+                report.add(
+                    "warn" if not strict else "error",
+                    "check.datacontract.bind",
+                    f"{doc.path.name}: engine datacontract requires data_contract ref or bind path to ODCS yaml",
+                )
+        if kind == "data-contract":
+            bind = doc.meta.get("bind") or doc.meta.get("contract_path")
+            if _is_placeholder(bind) or not bind:
+                report.add("error", "contract.bind", f"{doc.path.name}: bind/contract_path to ODCS file required")
+            elif root.is_dir() and isinstance(bind, str):
+                cand = root / bind
+                if not cand.is_file():
+                    report.add("error", "contract.path", f"{doc.path.name}: contract file not found: {bind}")
+            std = doc.meta.get("standard")
+            if std and std not in {"odcs", "ODCS", "datacontract"}:
+                report.add("warn", "contract.standard", f"{doc.path.name}: preferred standard is odcs")
+        if kind == "connector":
+            eng = doc.meta.get("engine")
+            if eng not in {"odcs-server", "adbc", "sqlalchemy", "datacontract", "custom"}:
+                report.add(
+                    "error",
+                    "connector.engine",
+                    f"{doc.path.name}: engine must be odcs-server|adbc|sqlalchemy|datacontract|custom",
+                )
+            if _is_placeholder(doc.meta.get("server_id")) and eng in {"odcs-server", "datacontract"}:
+                report.add("error", "connector.server", f"{doc.path.name}: server_id required for odcs/datacontract")
         if kind == "test":
             has_steps = bool([s for s in _as_list(doc.meta.get("steps")) if not _is_placeholder(s)])
             has_packets = bool(_refs(doc.meta.get("sql_packets")) or _refs(doc.meta.get("sql_packet")))
@@ -868,7 +932,7 @@ def _write_minimal_pack(root: Path) -> None:
     (root / "index.md").write_text(
         """---
 okf_version: "0.2"
-odfw_version: "0.2.1"
+odfw_version: "0.2.2"
 profile: odfw
 type: warehouse
 odfw_id: odfw:demo:warehouse
@@ -895,7 +959,7 @@ verified:
     concepts = {
         "oracle-bronze.md": """---
 okf_version: "0.2"
-odfw_version: "0.2.1"
+odfw_version: "0.2.2"
 type: warehouse-concept
 odfw_id: odfw:demo:oracle:bronze
 kind: oracle
@@ -910,7 +974,7 @@ verified:
 """,
         "layer-bronze.md": """---
 okf_version: "0.2"
-odfw_version: "0.2.1"
+odfw_version: "0.2.2"
 type: warehouse-concept
 odfw_id: odfw:demo:layer:bronze
 kind: layer
@@ -926,7 +990,7 @@ verified:
 """,
         "provider.md": """---
 okf_version: "0.2"
-odfw_version: "0.2.1"
+odfw_version: "0.2.2"
 type: warehouse-concept
 odfw_id: odfw:demo:provider:source
 kind: provider
@@ -939,7 +1003,7 @@ verified:
 """,
         "host.md": """---
 okf_version: "0.2"
-odfw_version: "0.2.1"
+odfw_version: "0.2.2"
 type: warehouse-concept
 odfw_id: odfw:demo:host:local
 kind: host
@@ -954,7 +1018,7 @@ verified:
 """,
         "cred.md": """---
 okf_version: "0.2"
-odfw_version: "0.2.1"
+odfw_version: "0.2.2"
 type: warehouse-concept
 odfw_id: odfw:demo:credential-plane:env
 kind: credential-plane
@@ -970,7 +1034,7 @@ verified:
 """,
         "auth.md": """---
 okf_version: "0.2"
-odfw_version: "0.2.1"
+odfw_version: "0.2.2"
 type: warehouse-concept
 odfw_id: odfw:demo:authority:readonly
 kind: authority-boundary

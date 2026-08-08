@@ -1,0 +1,13 @@
+apiVersion: v3.1.0
+kind: DataContract
+id: minimal-demo
+name: Minimal demo contract
+version: 0.0.1
+status: draft
+description:
+  purpose: Public fixture only — not a live warehouse.
+schema:
+  - name: demo
+    properties:
+      - name: demo_row
+        logicalType: integer

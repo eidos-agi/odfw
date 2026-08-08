@@ -1,6 +1,6 @@
 ---
 okf_version: "0.2"
-odfw_version: "0.2.1"
+odfw_version: "0.2.2"
 type: warehouse-concept
 odfw_id: odfw:minimal:authority:readonly
 kind: authority-boundary
