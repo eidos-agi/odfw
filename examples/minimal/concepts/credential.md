@@ -1,0 +1,15 @@
+---
+okf_version: "0.2"
+odfw_version: "0.2.1"
+type: warehouse-concept
+odfw_id: odfw:minimal:credential-plane:env
+kind: credential-plane
+title: "Env file on host"
+plane: env-file-on-host
+locator: ".env.local on the demo host (never committed)"
+forbids: ["print password", "commit .env"]
+verified:
+  by: human:daniel
+  at: 2026-08-07
+  method: "public fixture"
+---
