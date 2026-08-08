@@ -12,7 +12,7 @@ ODFW — warehouse structure, contracts, lineage, and proof
 
 It exists because warehouse programs fail the same way without mechanical rules: agents trust static registries as live data, treat published gold as the oracle, compare scalars instead of vectors, ignore definitional exclusions, hardcode entity names, and ship "green" without re-derivation proof. Those failures become **format rules** here.
 
-See [SPEC.md](SPEC.md) (as implemented) and [V1.md](V1.md) (format target: SQL packets, checks, tests, results, workbook pins). Public fixture: [examples/minimal](examples/minimal).
+See [SPEC.md](SPEC.md) (as implemented), [V1.md](V1.md) (roadmap), and [TESTING-AND-CONNECTORS.md](TESTING-AND-CONNECTORS.md) (ODCS/datacontract-cli defaults, adapters). Public fixture: [examples/minimal](examples/minimal).
 
 ```bash
 python3 -m odfw.validate --selftest
