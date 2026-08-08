@@ -38,7 +38,7 @@ python3 -m odfw.validate --strict examples/minimal
 
 ## Status
 
-**v0.2.2+ draft.** Schema and validator exist. Intention is spreadsheet→bronze packages as AI compile input for later metrics stacks.
+**v0.2.3+ draft.** Schema and validator exist. Intention is spreadsheet→bronze packages (row-first chronological prove for sheet metrics — SPEC §8a) as AI compile input for later metrics stacks.
 
 ## Install (optional)
 

@@ -78,7 +78,19 @@ RESULT_OUTCOMES = {
     "RECHECK",
     "NOT_DERIVABLE",
     "REGISTRY_STALE",
+    # Explicit non-calc classifications (SPEC §8a) — not silent skips
+    "NOT_APPLICABLE",
+    "SOURCE_ONLY",
+    "CARRIED_STRUCTURAL",
 }
+NON_CALC_CLASSES = {
+    "not_applicable",
+    "carried_structural",
+    "source_only",
+    "blank",
+    "forecast_out_of_window",
+}
+NON_CALC_OUTCOMES = {"NOT_APPLICABLE", "SOURCE_ONLY", "CARRIED_STRUCTURAL"}
 PLACEHOLDERS = {"tbd", "todo", "later", "unknown", "none", "n/a", "placeholder"}
 NON_AUTHORITATIVE_PLANES = {"catalog", "cache", "mcp", "dashboard"}
 ID_RE = re.compile(r"^odfw:[a-z0-9][a-z0-9._-]*(?::[a-z0-9][a-z0-9._-]*){1,6}$")
@@ -764,6 +776,22 @@ def validate_docs(
                     "result.outcome",
                     f"{doc.path.name}: outcome must be one of {sorted(RESULT_OUTCOMES)}",
                 )
+            ncc = doc.meta.get("non_calc_class")
+            if ncc is not None and ncc != "" and ncc not in NON_CALC_CLASSES:
+                report.add(
+                    "error",
+                    "result.non_calc_class",
+                    f"{doc.path.name}: non_calc_class must be one of {sorted(NON_CALC_CLASSES)}",
+                )
+            # SPEC §8a: non-calc outcomes need a reason (prospective honesty)
+            if outcome in NON_CALC_OUTCOMES or (ncc in NON_CALC_CLASSES if ncc else False):
+                notes = doc.meta.get("notes")
+                if _is_placeholder(notes) or not notes:
+                    report.add(
+                        "error" if strict else "warn",
+                        "result.non_calc_notes",
+                        f"{doc.path.name}: non-calc outcome/class requires notes reason (SPEC §8a)",
+                    )
         if kind in {"answer-key", "workbook"}:
             tool = doc.meta.get("tool")
             if tool and tool != "eidos-spreadsheet-explorer":

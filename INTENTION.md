@@ -57,6 +57,12 @@ Proof is **by-cell**, not by-row and not only by metric.
 - Recipes, seeds, checks, and results attach to **cells** (or cell sets only as derived views).
 - **Quality scoring** is first-class in the schema (per cell claim and/or result), so honesty caps (e.g. seed/manual vs bronze) can be enforced without tribal GMS-only knowledge.
 
+### Prove order (canonical for spreadsheet-derived metrics)
+
+**Row-first, chronological periods** — not column-first month batches. Finish (or honestly block / classify) one metric’s series across the relevant date range with shared definition/authority/calc context; emit **one result per cell** in period order. Periods that do not need a calculation get an **explicit** non-calc classification, never a silent skip.
+
+Rationale and gates: public **SPEC §8a**. Cards/trackers (if used) stay per logical cell; efficiency is shared row context, not collapsed evidence.
+
 ## Why this is simpler and more provable
 
 Two sides only for the core claim. Falsifiable in one sentence:

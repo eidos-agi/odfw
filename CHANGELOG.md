@@ -1,11 +1,19 @@
+# Changelog
+
+## 0.2.3 — 2026-08-08
+
+- **SPEC §8a** — spreadsheet-derived metrics: **row-first chronological** prove (normative); per-cell evidence; explicit non-calc classification
+- Rationale: column-first thrash; row keeps definition/authority/calc context across the series
+- Result outcomes: `NOT_APPLICABLE`, `SOURCE_ONLY`, `CARRIED_STRUCTURAL`; optional `non_calc_class`
+- Validator accepts new outcomes; requires `notes` for non-calc (warn / strict error)
+- Prospective + current path only — no bulk migration of historical results
+- INTENTION + AGENTS cross-links
+
 ## 0.2.2 — 2026-08-07
 
 - Kinds: `data-contract`, `connector`
 - `check.engine` + bind to ODCS/datacontract-cli (default external test runner)
 - See TESTING-AND-CONNECTORS.md
-
-
-# Changelog
 
 ## 0.2.1 — 2026-08-07
 

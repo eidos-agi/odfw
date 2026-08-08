@@ -1,4 +1,4 @@
-# ODFW v0.2.2 — Open Data Warehouse Format
+# ODFW v0.2.3 — Open Data Warehouse Format
 
 **An additive profile of OKF v0.2.** Every ODFW document preserves OKF provenance and trust. OKF renderers may ignore ODFW fields and still display the documents.
 
@@ -35,9 +35,11 @@ Each addition exists because a failure was felt or measured on real multi-vendor
 | Host alias drift (stale MagicDNS name → current primary) breaks "proven" connection recipes | `host` concepts carry durable selection rules and alias maps |
 | Credentials printed into chat; agents invent connection paths | Credential material is **never** in ODFW docs; only `credential-plane` pointers (Knox/Vault/path-on-host) |
 | Fan-out of 10 metric rows thrash before any recipe lands | Slice discipline: one `metric-contract` or one provider closure at a time until a recipe is proven |
+| **Column-first** prove (one month across unrelated metrics) thrash definition/source/calc context, hide series gaps, inflate wrong-turns and token cost | **Row-first chronological** prove for spreadsheet-derived metrics — §8a |
 | Answer-key / workbook values quietly become the "bronze recipe" | `answer-key` is a separate evidence plane; recipes that depend on it must declare `basis: answer-key` and cannot claim `basis: bronze` |
 | Registry ships without values; MCP answers from an old substrate | Publish paths are explicit `publish-path` chains with freshness and plane-of-record |
 | "Shipped" without re-derivation proof | Acceptance for a metric requires a triangulation verdict with evidence pointers |
+| Periods without a calc left ambiguous (“missing” / silent skip) | Explicit non-calc classification on the cell result (§8a) |
 
 ODFW is the place those rules become mechanical — so the next agent does not relearn them from a 180-line skill after another false green.
 
@@ -400,12 +402,13 @@ test: odfw:…:test:revenue-prove
 check: odfw:…:check:revenue-lob-vector
 at: 2026-08-07
 by: agent:odfw
-outcome: NOT_RUN            # PASS | FAIL | NOT_RUN | BLOCKED | PROVEN | GOLD_WRONG | RECHECK | NOT_DERIVABLE | REGISTRY_STALE
+outcome: NOT_RUN            # PASS | FAIL | NOT_RUN | BLOCKED | PROVEN | GOLD_WRONG | RECHECK | NOT_DERIVABLE | REGISTRY_STALE | NOT_APPLICABLE | SOURCE_ONLY | CARRIED_STRUCTURAL
+non_calc_class: null        # optional when no bronze calc: not_applicable | carried_structural | source_only | blank | forecast_out_of_window
 evidence: []
 notes: "blocked: warehouse not reached this session"
 ```
 
-**Gates:** `at`, `by`, `outcome` required. Results are append-only evidence; they need not be composition-reachable from the face. `acceptance.evidence` MAY point at result ids.
+**Gates:** `at`, `by`, `outcome` required. Results are append-only evidence; they need not be composition-reachable from the face. `acceptance.evidence` MAY point at result ids. When `outcome` is `NOT_APPLICABLE`, `SOURCE_ONLY`, or `CARRIED_STRUCTURAL`, or when `non_calc_class` is set, the result is an explicit **non-calc** classification — not a silent skip (§8a).
 
 ### Workbook / answer-key pins (spreadsheet-explorer)
 
@@ -421,6 +424,34 @@ fidelity: unknown            # source | derivative | unknown | …
 ```
 
 **Gates:** when `tool` is set it MUST be `eidos-spreadsheet-explorer` (or empty for legacy). Prefer pinning digests once sidecars exist. Do not embed whole-sheet JSON in concept bodies.
+
+### 8a. Spreadsheet-derived metrics — row-first chronological prove (normative)
+
+**Applies to:** packs whose primary claims are **spreadsheet cells or metric×period series** against bronze (the core ODFW intention).  
+**Does not require** rewriting historical results already shipped under an older prove order.
+
+#### Rule
+
+1. **Row-first, then period order.** Prove **one logical metric (row)** across its **relevant date range** in **ascending period** before switching to the next metric. Do **not** govern work by a single “column batch” (one month × many unrelated metrics).
+2. **Retain row context.** Keep that metric’s definition, authority mapping (tables/maps/exclusions), and calculation/recipe shape loaded for the full series; retrieve the period series together where feasible; reuse the proof pattern across periods.
+3. **Per-cell evidence.** Each logical cell (`metric_id` + `period` / address as defined by the pack) gets its **own** append-only `result` (and external work tracker card if the pack uses one). Efficiency is **shared row context**, not collapsing multiple periods into one result or one card.
+4. **Non-calc is classified.** Any period in range that does **not** require a bronze calculation MUST be recorded with an explicit classification — via `outcome` ∈ {`NOT_APPLICABLE`, `SOURCE_ONLY`, `CARRIED_STRUCTURAL`} and/or `non_calc_class` ∈ {`not_applicable`, `carried_structural`, `source_only`, `blank`, `forecast_out_of_window`} — plus a short reason in `notes`. Silent omission is a format violation for **new** work.
+
+#### Rationale
+
+A **column** is one month across unrelated metrics: agents re-load source, definition, and calculation on every cell — high wrong-turn and token cost; series gaps and definition changes stay invisible. A **row** is one metric’s complete time-series story: authority and calc stay in context; definition drift, holes, and no-calc periods show as a single narrative.
+
+#### Validation expectation
+
+| Gate | Severity | Notes |
+|---|---|---|
+| `result.outcome` ∈ extended enum including non-calc outcomes | **error** (validator) | New outcomes accepted; unknown outcomes fail |
+| `non_calc_class` if present ∈ allowed set | **error** (validator) | Invalid class fails |
+| Non-calc `outcome` without `notes` (or empty notes) | **warn** (strict: **error**) | Force a reason string |
+| Pack prove order / historical column-first results | **not** auto-failed | Prospective + current path only; no bulk migration required |
+| Human/harness | Document row-first in pack `AGENTS` or decisions for new spreadsheet slices | Soft — not a face lifecycle blocker |
+
+Private packs apply this **prospectively** on new spreadsheet→bronze work and on the **active** proof path. Prior May-column or mixed-order results remain valid historical evidence unless a pack chooses to supersede them.
 
 ---
 
@@ -560,6 +591,6 @@ Issue trackers execute work. dbt owns model SQL. Dagster owns run history. EMF o
 
 | | |
 |---|---|
-| Profile | ODFW **0.2.2** |
+| Profile | ODFW **0.2.3** |
 | Base | OKF **0.2** |
 | Status | Draft — sql-packet / check / test / result / workbook pins; private packs dogfood |
