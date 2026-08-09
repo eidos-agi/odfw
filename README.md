@@ -8,6 +8,7 @@ EMF  — human intent and durable memory
 ORF  — research and findings
 OPF  — product commitments, UX, slices, and proof
 ODFW — spreadsheet → bronze proof packages (portable, fail-closed)
+OPFF — personal finance packs (https://github.com/eidos-agi/opff; not warehouse proof)
 ```
 
 ## Intention (read this first)
