@@ -1,8 +1,8 @@
 ---
 okf_version: "0.2"
-odfw_version: "0.2.2"
+odwf_version: "0.2.2"
 type: warehouse-concept
-odfw_id: odfw:minimal:credential-plane:env
+odwf_id: odwf:minimal:credential-plane:env
 kind: credential-plane
 title: "Env file on host"
 plane: env-file-on-host

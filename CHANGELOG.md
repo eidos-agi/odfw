@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.2.5 — 2026-08-10
+
+- Correct the canonical acronym to ODWF: Open Data Warehouse Format
+- Canonical Python package, CLI, fields, IDs, and inventory schema now use `odwf`
+- Preserve read compatibility for legacy `odfw` packages, commands, fields, IDs, and inventories
+
+## 0.2.4 — 2026-08-10
+
+- Source-complete workbook row inventory contract (`odwf-row-inventory-v1`)
+- Separate physical-row and metric-row denominators with exact reconciliation
+- Structural row roles and semantic metric kinds; unresolved classifications fail strict validation
+- Cold, stdlib-only `odwf-validate --inventory --strict` validation without reopening Excel
+
 ## 0.2.3 — 2026-08-08
 
 - **SPEC §8a** — spreadsheet-derived metrics: **row-first chronological** prove (normative); per-cell evidence; explicit non-calc classification
@@ -25,7 +38,7 @@
 
 ## 0.2.0 — 2026-08-07
 
-First draft of ODFW as an additive OKF v0.2 profile.
+First draft of ODWF as an additive OKF v0.2 profile.
 
 - SPEC: warehouse face, atomic kinds, oracle/serving honesty, metric-contracts, vector triangulation verdicts, lifecycle gates
 - Stdlib validator with `--selftest` and `--strict`

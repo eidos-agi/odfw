@@ -1,0 +1,26 @@
+name: validate
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: ODWF gates
+        run: |
+          set -euo pipefail
+          python3 -m odwf.validate --selftest
+          python3 -m odwf.validate --progress examples/row-progress
+          python3 -m odwf.validate --strict examples/minimal
+          python3 -m odfw.validate --strict examples/minimal
+          PYTHONPATH=. python3 -m unittest discover -s tests -p 'test_*.py'

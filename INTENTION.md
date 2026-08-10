@@ -1,13 +1,13 @@
-# ODFW intention
+# ODWF intention
 
 **Status:** load-bearing product intention for the public format  
-**Instance dogfood:** private packs (e.g. `cerebro-odfw-v1`) must share this intention  
+**Instance dogfood:** private packs (e.g. `cerebro-odwf-v1`) must share this intention
 
 ---
 
 ## One sentence
 
-ODFW is the open format for **self-contained packages that prove an original spreadsheet against bronze warehouse data, by cell**, with **quality scores** in the schema — so a completed pack is simple, falsifiable, and rich enough that an AI can later compile it into a full analytics metrics package.
+ODWF is the open format for **self-contained packages that prove an original spreadsheet against bronze warehouse data, by cell**, with **quality scores** in the schema — so a completed pack is simple, falsifiable, and rich enough that an AI can later compile it into a full analytics metrics package.
 
 ---
 
@@ -36,7 +36,7 @@ original spreadsheet (starting, often hardcoded)
 
 ## Self-contained package (not a product coupling)
 
-A private ODFW pack ships everything needed to re-run the prove path:
+A private ODWF pack ships everything needed to re-run the prove path:
 
 - pinned workbook + explorer sidecars  
 - topology (host, credential-plane, bronze schemas/tables)  
@@ -91,7 +91,7 @@ The format does not *be* the analytics stack (dbt/Dagster/serving). It makes tha
 
 ---
 
-## What ODFW is not
+## What ODWF is not
 
 - A warehouse engine or credential vault  
 - A gold publish pipeline  

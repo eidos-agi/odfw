@@ -1,29 +1,29 @@
-# ODFW v0.2.3 — Open Data Warehouse Format
+# ODWF v0.2.5 — Open Data Warehouse Format
 
-**An additive profile of OKF v0.2.** Every ODFW document preserves OKF provenance and trust. OKF renderers may ignore ODFW fields and still display the documents.
+**An additive profile of OKF v0.2.** Every ODWF document preserves OKF provenance and trust. OKF renderers may ignore ODWF fields and still display the documents.
 
 **Product intention (load-bearing):** see [INTENTION.md](INTENTION.md).  
-In one line: ODFW packages prove an **original spreadsheet** (explorer-pinned) against **bronze**, self-contained with **seeds** when needed, uncoupled from any metrics app, so a complete pack can later be compiled into an analytics metrics package.
+In one line: ODWF packages prove an **original spreadsheet** (explorer-pinned) against **bronze**, self-contained with **seeds** when needed, uncoupled from any metrics app, so a complete pack can later be compiled into an analytics metrics package.
 
 ```text
 OKF  — knowledge and trust
 EMF  — human intent and durable memory
 ORF  — approved research and graded findings
 OPF  — product commitments, experience, slices, and proof
-ODFW — spreadsheet → bronze proof packages (topology, recipes, seeds, checks, results)
+ODWF — spreadsheet → bronze proof packages (topology, recipes, seeds, checks, results)
 ```
 
-ODFW composes these formats; it does not merge them. Human intent remains EMF. Research remains ORF. Product surfaces remain OPF. ODFW owns the portable **spreadsheet→bronze** proof graph: pinned workbook, bronze oracle, recipes/sql-packets, seeds, checks, tests, results, and operating boundaries.
+ODWF composes these formats; it does not merge them. Human intent remains EMF. Research remains ORF. Product surfaces remain OPF. ODWF owns the portable **spreadsheet→bronze** proof graph: pinned workbook, bronze oracle, recipes/sql-packets, seeds, checks, tests, results, and operating boundaries.
 
-If a requirement conflicts with OKF v0.2, **OKF wins for base structure**. ODFW only adds required frontmatter, pack layout conventions, warehouse concept kinds, and biting gates.
+If a requirement conflicts with OKF v0.2, **OKF wins for base structure**. ODWF only adds required frontmatter, pack layout conventions, warehouse concept kinds, and biting gates.
 
 ---
 
-## 1. Why ODFW exists (measured failures)
+## 1. Why ODWF exists (measured failures)
 
 Each addition exists because a failure was felt or measured on real multi-vendor warehouse programs — not because medallion orthodoxy looks tidy.
 
-| Observed failure | ODFW rule |
+| Observed failure | ODWF rule |
 |---|---|
 | Agents treat a **static registry/MCP** as live warehouse truth; stale names (`sage_bronze.gl_journal_entries` vs real `dd5_sage_bronze.gl_entries`) poison recipes | `serving-plane` objects declare what they are (catalog / cache / live query). Live names resolve from `information_schema` (or equivalent), never from catalog prose alone |
 | **Gold is partial and may be wrong**, yet agents use gold (or the registry snapshot of gold) as the oracle | Every warehouse names exactly one `oracle` layer. When bronze is complete and gold is partial, the oracle is **bronze**. Gold is under test |
@@ -33,7 +33,7 @@ Each addition exists because a failure was felt or measured on real multi-vendor
 | Summing all series for a metric **double-counts** (~$3.4M class error) | A metric pins exactly one live `series` (or an explicit multi-series composition with proof of no double-count) |
 | Decommissioned substrates (v4 Supabase, disabled repos) keep getting used | Pack face lists `retired_substrates`; validators warn on references into them |
 | Host alias drift (stale MagicDNS name → current primary) breaks "proven" connection recipes | `host` concepts carry durable selection rules and alias maps |
-| Credentials printed into chat; agents invent connection paths | Credential material is **never** in ODFW docs; only `credential-plane` pointers (Knox/Vault/path-on-host) |
+| Credentials printed into chat; agents invent connection paths | Credential material is **never** in ODWF docs; only `credential-plane` pointers (Knox/Vault/path-on-host) |
 | Fan-out of 10 metric rows thrash before any recipe lands | Slice discipline: one `metric-contract` or one provider closure at a time until a recipe is proven |
 | **Column-first** prove (one month across unrelated metrics) thrash definition/source/calc context, hide series gaps, inflate wrong-turns and token cost | **Row-first chronological** prove for spreadsheet-derived metrics — §8a |
 | Answer-key / workbook values quietly become the "bronze recipe" | `answer-key` is a separate evidence plane; recipes that depend on it must declare `basis: answer-key` and cannot claim `basis: bronze` |
@@ -41,7 +41,7 @@ Each addition exists because a failure was felt or measured on real multi-vendor
 | "Shipped" without re-derivation proof | Acceptance for a metric requires a triangulation verdict with evidence pointers |
 | Periods without a calc left ambiguous (“missing” / silent skip) | Explicit non-calc classification on the cell result (§8a) |
 
-ODFW is the place those rules become mechanical — so the next agent does not relearn them from a 180-line skill after another false green.
+ODWF is the place those rules become mechanical — so the next agent does not relearn them from a 180-line skill after another false green.
 
 ---
 
@@ -53,7 +53,7 @@ ODFW is the place those rules become mechanical — so the next agent does not r
 | **EMF** | Human intent (`type: intent`), altitude, concerns — what the warehouse is *for* as stated by a human |
 | **ORF** | Investigations that discover recipes, failure modes, prior art — graded findings agents may promote |
 | **OPF** | Product faces (dashboards, sheets) that *consume* warehouse outputs |
-| **ODFW** | Warehouse structure, data contracts, lineage, transforms, quality evidence, operating ownership |
+| **ODWF** | Warehouse structure, data contracts, lineage, transforms, quality evidence, operating ownership |
 
 ```text
 OKF v0.2
@@ -61,7 +61,7 @@ OKF v0.2
 ├── ORF   — research / investigation packs
 ├── OPF   — product commitments and UX proof
 ├── ODDF  — capital diligence (out of scope)
-└── ODFW  — data warehouse portability and proof
+└── ODWF  — data warehouse portability and proof
 ```
 
 **Compose, don't merge.** A metric face may link `intent: emf:…`, `research: orf:…`, and `product: opf:…`. It does not restate human intent or invent product promises.
@@ -70,10 +70,10 @@ OKF v0.2
 
 ## 3. Unit of distribution
 
-One ODFW pack defines **one warehouse** or one **independently governed warehouse domain** (e.g. `acme-ops` vs a second domain that can retire independently).
+One ODWF pack defines **one warehouse** or one **independently governed warehouse domain** (e.g. `acme-ops` vs a second domain that can retire independently).
 
 ```text
-docs/odfw/                    # or pack root
+docs/odwf/                    # or pack root
   index.md                    # required warehouse face
   log.md                      # append-only warehouse-definition history
   concepts/                   # atomic warehouse concepts
@@ -84,7 +84,14 @@ docs/odfw/                    # or pack root
 
 Folders aid navigation; **IDs and typed references** define the graph. Split a pack when a domain can be governed, versioned, or retired independently.
 
-Default home for a private pack: either a dedicated private pack repo, or `docs/odfw/` inside a private warehouse monorepo. **This public repository ships only the specification, validator, and fictional fixtures.** Real warehouse packs must not be checked in here.
+Default home for a private pack: either a dedicated private pack repo, or `docs/odwf/` inside a private warehouse monorepo. **This public repository ships only the specification, validator, and fictional fixtures.** Real warehouse packs must not be checked in here.
+
+### 3.1 Naming compatibility
+
+ODWF is the canonical acronym. New documents use `odwf_version`, `odwf_id`, the
+`odwf:` ID prefix, and `odwf-row-inventory-v1`. Published `odfw` identifiers are
+stable historical identities: validators continue to read them, but generators
+must not emit them for new artifacts.
 
 ---
 
@@ -93,26 +100,26 @@ Default home for a private pack: either a dedicated private pack repo, or `docs/
 ```yaml
 ---
 okf_version: "0.2"
-odfw_version: "0.2.0"
-profile: odfw
+odwf_version: "0.2.0"
+profile: odwf
 type: warehouse
-odfw_id: odfw:acme-ops:warehouse
+odwf_id: odwf:acme-ops:warehouse
 title: "Acme ops warehouse"
 status: operating
 imports: [emf:acme-data@2026-07-06]
 intent: [emf:acme-data:bronze-is-oracle@2026-07-06]
-oracle: odfw:acme-ops:oracle:bronze
-layers: [odfw:acme-ops:layer:bronze, odfw:acme-ops:layer:silver, odfw:acme-ops:layer:gold]
-providers: [odfw:acme-ops:provider:erp, odfw:acme-ops:provider:ops]
-hosts: [odfw:acme-ops:host:primary-postgres]
-credential_plane: odfw:acme-ops:credential-plane:vault
-authority: [odfw:acme-ops:authority:select-only-prod]
-serving_planes: [odfw:acme-ops:serving:live-pg, odfw:acme-ops:serving:registry-mcp]
-publish_paths: [odfw:acme-ops:publish:gold-to-app]
-first_slice: odfw:acme-ops:slice:revenue-prove
+oracle: odwf:acme-ops:oracle:bronze
+layers: [odwf:acme-ops:layer:bronze, odwf:acme-ops:layer:silver, odwf:acme-ops:layer:gold]
+providers: [odwf:acme-ops:provider:erp, odwf:acme-ops:provider:ops]
+hosts: [odwf:acme-ops:host:primary-postgres]
+credential_plane: odwf:acme-ops:credential-plane:vault
+authority: [odwf:acme-ops:authority:select-only-prod]
+serving_planes: [odwf:acme-ops:serving:live-pg, odwf:acme-ops:serving:registry-mcp]
+publish_paths: [odwf:acme-ops:publish:gold-to-app]
+first_slice: odwf:acme-ops:slice:revenue-prove
 non_goals: ["public TCP proxy for the financial DB", "gold as oracle", "writing to production from agents"]
 retired_substrates: ["legacy-v4-manifest", "retired-cloud-db as warehouse of record"]
-proof: [odfw:acme-ops:acceptance:bronze-probe]
+proof: [odwf:acme-ops:acceptance:bronze-probe]
 verified:
   by: human:daniel
   at: 2026-08-07
@@ -142,7 +149,7 @@ Every non-face document uses:
 
 ```yaml
 type: warehouse-concept
-odfw_id: odfw:<warehouse>:<kind>:<slug>
+odwf_id: odwf:<warehouse>:<kind>:<slug>
 kind: metric-contract
 ```
 
@@ -186,7 +193,7 @@ Allowed `kind` values:
 | `data-contract` | Pin to ODCS (or compatible) contract file + server id |
 | `connector` | Get-online adapter pin (odcs-server / datacontract / adbc / …) |
 
-IDs match `odfw:<warehouse>:<kind>:<slug>` (additional stable segments allowed), are unique in the validation closure, and **never change after publication**. A new interpretation gets a new ID and explicit `supersedes` / `superseded_by` (both edges, matching kinds, one live head).
+IDs match `odwf:<warehouse>:<kind>:<slug>` (additional stable segments allowed), are unique in the validation closure, and **never change after publication**. A new interpretation gets a new ID and explicit `supersedes` / `superseded_by` (both edges, matching kinds, one live head).
 
 One document makes one warehouse assertion someone could dispute, supersede, implement, or test.
 
@@ -245,7 +252,7 @@ Composition fields from the face:
 
 ```yaml
 kind: oracle
-layer: odfw:acme-ops:layer:bronze
+layer: odwf:acme-ops:layer:bronze
 rule: "Bronze is complete and trusted; gold is under test. Never validate gold with gold."
 ```
 
@@ -281,10 +288,10 @@ stale_risk: high
 ```yaml
 kind: recipe
 basis: bronze               # bronze | silver | gold | answer-key | hybrid
-inputs: [odfw:…:table:gl-entries, odfw:…:exclusion-set:known]
-outputs: [odfw:…:series:revenue-lob-total]
-entity_map: odfw:…:entity-map:locations
-exclusions: [odfw:…:exclusion-set:known]
+inputs: [odwf:…:table:gl-entries, odwf:…:exclusion-set:known]
+outputs: [odwf:…:series:revenue-lob-total]
+entity_map: odwf:…:entity-map:locations
+exclusions: [odwf:…:exclusion-set:known]
 grain: [entity_id, period]
 notes: "signed by tr_type; revenue = -sum(amount*tr_type)"
 ```
@@ -299,16 +306,16 @@ notes: "signed by tr_type; revenue = -sum(amount*tr_type)"
 
 ```yaml
 kind: metric-contract
-metric: odfw:acme-ops:metric:revenue
-series: odfw:acme-ops:series:lob-total
-recipe: odfw:acme-ops:recipe:revenue-lob
+metric: odwf:acme-ops:metric:revenue
+series: odwf:acme-ops:series:lob-total
+recipe: odwf:acme-ops:recipe:revenue-lob
 tolerance:
   mode: display-half-ulp    # display-half-ulp | absolute | relative
   value: null               # absolute/relative only
 compare: vector             # vector | scalar — scalar is warn in draft, error in strict for operating packs
-oracle: odfw:acme-ops:oracle:bronze
-answer_key: odfw:acme-ops:answer-key:finance-workbook   # optional third plane
-proof: [odfw:acme-ops:acceptance:revenue-lob]
+oracle: odwf:acme-ops:oracle:bronze
+answer_key: odwf:acme-ops:answer-key:finance-workbook   # optional third plane
+proof: [odwf:acme-ops:acceptance:revenue-lob]
 ```
 
 ### Acceptance and verdict
@@ -322,7 +329,7 @@ evidence: []                # required when observed or failed
 
 ```yaml
 kind: verdict
-metric_contract: odfw:…:metric-contract:revenue-lob
+metric_contract: odwf:…:metric-contract:revenue-lob
 at: 2026-07-06
 result: PROVEN              # PROVEN | GOLD_WRONG | RECHECK | NOT_DERIVABLE | REGISTRY_STALE
 bronze_vs_key: match
@@ -348,9 +355,9 @@ kind: sql-packet
 basis: bronze
 sql_path: sql/revenue-lob.sql    # relative to pack root; OR sql_body inline
 grain: [entity_id, period]
-inputs: [odfw:…:table:gl-entries]
-entity_map: odfw:…:entity-map:locations
-exclusions: [odfw:…:exclusion-set:known]
+inputs: [odwf:…:table:gl-entries]
+entity_map: odwf:…:entity-map:locations
+exclusions: [odwf:…:exclusion-set:known]
 posture: select-only             # required; writes forbidden
 ```
 
@@ -363,7 +370,7 @@ The validator does **not** execute SQL. Harnesses do.
 ```yaml
 kind: check
 engine: datacontract          # datacontract | dbt | great-expectations | soda | sql-packet | custom
-data_contract: odfw:…:data-contract:…
+data_contract: odwf:…:data-contract:…
 bind: contracts/gl-entries-bronze.odcs.yaml
 ```
 
@@ -371,8 +378,8 @@ Or sql-packet triangulation:
 
 ```yaml
 kind: check
-metric_contract: odfw:…:metric-contract:revenue-lob
-sql_packet: odfw:…:sql-packet:revenue-lob
+metric_contract: odwf:…:metric-contract:revenue-lob
+sql_packet: odwf:…:sql-packet:revenue-lob
 compare: vector
 tolerance:
   mode: display-half-ulp
@@ -387,9 +394,9 @@ peers: [bronze, live-gold, answer-key]   # free strings documenting peer planes
 kind: test
 title: "First slice revenue prove"
 steps: ["run sql-packet revenue-lob", "apply check revenue-lob-vector", "append result"]
-sql_packets: [odfw:…:sql-packet:revenue-lob]
-checks: [odfw:…:check:revenue-lob-vector]
-proof: [odfw:…:acceptance:revenue-lob]
+sql_packets: [odwf:…:sql-packet:revenue-lob]
+checks: [odwf:…:check:revenue-lob-vector]
+proof: [odwf:…:acceptance:revenue-lob]
 ```
 
 **Gates:** at least one of `sql_packets` / `checks` / nonempty `steps`; `steps` must not be placeholder-only.
@@ -398,10 +405,10 @@ proof: [odfw:…:acceptance:revenue-lob]
 
 ```yaml
 kind: result
-test: odfw:…:test:revenue-prove
-check: odfw:…:check:revenue-lob-vector
+test: odwf:…:test:revenue-prove
+check: odwf:…:check:revenue-lob-vector
 at: 2026-08-07
-by: agent:odfw
+by: agent:odwf
 outcome: NOT_RUN            # PASS | FAIL | NOT_RUN | BLOCKED | PROVEN | GOLD_WRONG | RECHECK | NOT_DERIVABLE | REGISTRY_STALE | NOT_APPLICABLE | SOURCE_ONLY | CARRIED_STRUCTURAL
 non_calc_class: null        # optional when no bronze calc: not_applicable | carried_structural | source_only | blank | forecast_out_of_window
 evidence: []
@@ -427,7 +434,7 @@ fidelity: unknown            # source | derivative | unknown | …
 
 ### 8a. Spreadsheet-derived metrics — row-first chronological prove (normative)
 
-**Applies to:** packs whose primary claims are **spreadsheet cells or metric×period series** against bronze (the core ODFW intention).  
+**Applies to:** packs whose primary claims are **spreadsheet cells or metric×period series** against bronze (the core ODWF intention).
 **Does not require** rewriting historical results already shipped under an older prove order.
 
 #### Rule
@@ -456,6 +463,68 @@ A **column** is one month across unrelated metrics: agents re-load source, defin
 | Human/harness | Document row-first + complementary source for incomplete years in pack `AGENTS` | Soft — not a face lifecycle blocker |
 
 Private packs apply this **prospectively** on new spreadsheet→bronze work and on the **active** proof path. Prior May-column or mixed-order results remain valid historical evidence unless a pack chooses to supersede them.
+
+### 8a.6 Progress fairness (file-checkable; `odwf-validate --progress`)
+
+When a pack claims row-first spreadsheet→bronze progress via **progress manifests**, the claim is fair only if the files show full-window coverage and honest evidence. This gate is **stdlib file inspection** — not live SQL and not a work-tracker.
+
+#### Progress files (pack-local)
+
+| File | Role |
+|---|---|
+| `evidence/prove-window.json` | Declares `period_start` and `period_end` as `YYYY-MM` (inclusive month range). Optional; default window is the union of periods listed across manifests when omitted. |
+| `evidence/*-progress.json` | One JSON **array** per logical metric row. Each element is one cell in the window. |
+
+#### Cell object (each array element)
+
+| Field | Required | Meaning |
+|---|---|---|
+| `period` | yes | `YYYY-MM` |
+| `outcome` | yes | Same enum as `result.outcome` (§8) |
+| `result` | yes | Pack-relative path to that cell’s result evidence file |
+| `sql` | when `outcome` is `PASS` or `FAIL` | Pack-relative path to SELECT packet body for that cell |
+| `quality_score` | recommended | Integer honesty score used by the pack (convention: match ≥8-class, mismatch &lt;8) |
+| `non_calc_class` | when outcome is non-calc | One of §8a non-calc classes |
+| `notes` | when non-calc | Short reason (same spirit as result `notes`) |
+
+#### Fairness rules (`--progress`)
+
+| Gate | Severity |
+|---|---|
+| At least one `evidence/*-progress.json` when `--progress` is invoked | **error** if absent (pending ≠ fair) |
+| Every period in the prove window appears in each `*-progress.json` | **error** (silent omit forbidden) |
+| Each cell `result` path is pack-relative, inside root, and exists | **error** |
+| `PASS` / `FAIL` cells have a pack-relative, in-root, existing `sql` path | **error** |
+| Absolute paths or `..` segments in evidence paths | **error** |
+| `outcome` ∈ allowed result outcomes | **error** |
+| Non-calc outcome without `non_calc_class` | **error** |
+| `FAIL` with `quality_score` ≥ 8 | **error** (quality inflation) |
+| `PASS` with `quality_score` present and not 8 | **error** under this convention |
+
+**Path rule:** `result` and `sql` values MUST be pack-relative paths that resolve **inside** the pack root. Absolute paths and `..` traversal are **errors**. Existence of a file outside the pack does not satisfy fairness.
+
+**Out of scope for this gate (non-normative):** work-tracker cards, Linear, issue IDs, live warehouse queries, dual-writing every cell as a `kind: result` concept. Trackers may exist; they must not replace progress files or result/sql evidence.
+
+If no `evidence/*-progress.json` exists, `--progress` is an **error** (`progress.absent`): nothing to score is **pending/absent**, not fair progress.
+
+### 8b. Source-complete workbook row inventory
+
+A filtered answer-key or warehouse export is not a workbook inventory. A pack that claims complete spreadsheet coverage SHOULD carry one `evidence/*-row-inventory.json` per sheet using `schema_version: odwf-row-inventory-v1`.
+
+The inventory records every physical row from 1 through the sheet dimension, including blanks and structural rows. It carries two separate denominators:
+
+- `counts.physical_rows`: every row in the pinned sheet.
+- `counts.metric_rows`: only rows whose `row_role` is `metric`.
+
+Allowed structural roles are `blank`, `title`, `section_header`, `column_header`, `note`, `metric`, and `unknown`. Metric rows additionally declare exactly one semantic kind: `source_input`, `derived_metric`, `total_subtotal`, `rate_ratio`, `variance_change`, or `unclear`. Each row records a nonempty `classification_basis`, its nonblank/formula `cells`, and `included_in_metric_denominator`; that boolean MUST equal `row_role == metric`.
+
+`odwf-validate --inventory` verifies the JSON without opening Excel: workbook MD5 shape, sheet-dimension endpoint, exact contiguous row coverage, cell-address ownership, unique metric IDs, role/kind enums, denominator membership, and declared count reconciliation. `unknown` roles and `unclear` metric kinds warn in draft and fail under `--strict`.
+
+This gate does not parse XLSX and does not replace the workbook pin. A producer (spreadsheet explorer or a private harness) creates the inventory from the pinned source; a cold validator can then prove the package is internally source-complete.
+
+An inventory that claims business-semantic completeness sets `claim_level: semantic` and embeds a `semantic_contract` with `schema_version: odwf-row-semantics-v1`. The contract defines the assessed period-to-column map, value meanings, row-role and metric-kind rule IDs, source classes, and outcome meanings. Every row names its applied role rule; every metric also names its metric-kind rule and carries one `outcome_evidence` record per assessed period. Each record embeds its period, cell address, sheet/reference values, absolute delta, outcome, comparison rule/basis/tolerance, calculation source or non-calc class, and pack-local result/query evidence. `PASS` means `abs(delta) <= comparison_tolerance`; `FAIL` means it is greater. `NOT_APPLICABLE` uses `comparison_basis: not_applicable`, a null tolerance, a null query path, and an explicit non-calc class; its sheet value is retained but not compared. Row-level outcome counts and lineage summaries MUST reconcile to those embedded records. Historical denominator mistakes MAY be retained separately as historical evidence, but MUST NOT appear as current metric outcome evidence.
+
+`odwf-validate --inventory` validates that semantic contract when `claim_level` is `semantic`. A structural-only v1 inventory remains valid for backward compatibility, but it does not claim that a cold reader can reconstruct classifications or outcome lineage from the inventory alone.
 
 ---
 
@@ -529,7 +598,7 @@ imports: [emf:acme-data@2026-07-06, orf:bronze-lessons@2026-07-06]
 - `intent` accepts EMF only.
 - `research` accepts ORF only.
 - `product` accepts OPF only.
-- `evidence` accepts ORF or OKF (and local ODFW verdict/acceptance ids).
+- `evidence` accepts ORF or OKF (and local ODWF verdict/acceptance ids).
 
 Draft validation warns on unpinned or undeclared externals; `--strict` fails. v0.2.0 validates declared pins but does not fetch remote packs.
 
@@ -544,30 +613,31 @@ Default mode is **draft**: all local structure, target kinds, directed reachabil
 The validator accepts only the documented YAML subset: scalar values, inline scalar lists, indented scalar lists, and nested maps such as `verified` / `tolerance`. Duplicate keys, tabs, multiline scalars, inline maps, lists of maps, and malformed lines fail closed. Stdlib only — same discipline as OPF/ORF/EMF.
 
 ```bash
-python3 -m odfw.validate --selftest
-python3 -m odfw.validate examples/minimal
-python3 -m odfw.validate --strict examples/minimal
-python3 -m odfw.validate --strict /path/to/private-warehouse-pack
+python3 -m odwf.validate --selftest
+python3 -m odwf.validate examples/minimal
+python3 -m odwf.validate --strict examples/minimal
+python3 -m odwf.validate --inventory --strict /path/to/private-warehouse-pack
+python3 -m odwf.validate --strict /path/to/private-warehouse-pack
 ```
 
 ---
 
 ## 13. Conformance
 
-- Every document declares `okf_version: "0.2"` and `odfw_version` on the `0.2.x` line (`X.Y` MUST equal `okf_version`).
-- `index.md` uses `type: warehouse`; other ODFW documents use `type: warehouse-concept`.
+- Every document declares `okf_version: "0.2"` and `odwf_version` on the `0.2.x` line (`X.Y` MUST equal `okf_version`).
+- `index.md` uses `type: warehouse`; other ODWF documents use `type: warehouse-concept`.
 - Lifecycle, target-kind, oracle, first-slice, recipe-basis, acceptance, supersession, and parser gates pass.
 - IDs are unique, internal references resolve, and every concept is reachable through directed composition edges.
 - Every document carries OKF `verified.by` and a nonempty `verified.method`.
 - Strict validation has no warnings.
 
-Versioning: ODFW inherits its first two components from OKF. First release on OKF 0.2 is `0.2.0`; profile-only revisions are `0.2.1`, …. OKF `0.3` starts ODFW `0.3.0`.
+Versioning: ODWF inherits its first two components from OKF. First release on OKF 0.2 is `0.2.0`; profile-only revisions are `0.2.1`, …. OKF `0.3` starts ODWF `0.3.0`.
 
 ---
 
 ## 14. Non-goals
 
-ODFW is a **format**, not:
+ODWF is a **format**, not:
 
 - a warehouse engine, dbt project, or Dagster deployment
 - a credentials store
@@ -575,13 +645,13 @@ ODFW is a **format**, not:
 - a replacement for `information_schema` or live SQL
 - a product PRD (use OPF for product UI)
 
-Issue trackers execute work. dbt owns model SQL. Dagster owns run history. EMF owns human intent. ORF owns research. OPF owns product commitments. **ODFW owns the warehouse commitments and typed links connecting those authorities.**
+Issue trackers execute work. dbt owns model SQL. Dagster owns run history. EMF owns human intent. ORF owns research. OPF owns product commitments. **ODWF owns the warehouse commitments and typed links connecting those authorities.**
 
 ---
 
 ## 15. Prior art and grounding corpus
 
-| Source | What ODFW took |
+| Source | What ODWF took |
 |---|---|
 | **OPF** | Additive OKF profile pattern, atomic concepts, directed edges, lifecycle gates, first-slice proof, stdlib validator |
 | **ORF** | Measured-failures table, admission rules that bite, evidence grades pattern (adapted to verdicts) |
@@ -595,6 +665,6 @@ Issue trackers execute work. dbt owns model SQL. Dagster owns run history. EMF o
 
 | | |
 |---|---|
-| Profile | ODFW **0.2.3** |
+| Profile | ODWF **0.2.5** |
 | Base | OKF **0.2** |
 | Status | Draft — sql-packet / check / test / result / workbook pins; private packs dogfood |

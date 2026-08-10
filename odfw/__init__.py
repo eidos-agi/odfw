@@ -1,5 +1,7 @@
-"""Open Data Warehouse Format — additive OKF v0.2 profile."""
+"""Compatibility alias for the former ``odfw`` package name."""
 
-OKF_VERSION = "0.2"
-ODFW_VERSION = "0.2.3"
-__version__ = ODFW_VERSION
+from odwf import ODWF_VERSION, OKF_VERSION, __version__
+
+ODFW_VERSION = ODWF_VERSION
+
+__all__ = ["ODFW_VERSION", "ODWF_VERSION", "OKF_VERSION", "__version__"]

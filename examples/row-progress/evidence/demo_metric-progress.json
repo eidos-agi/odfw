@@ -1,0 +1,18 @@
+[
+  {
+    "period": "2025-01",
+    "outcome": "PASS",
+    "quality_score": 8,
+    "result": "results/demo-2025-01.md",
+    "sql": "sql/demo-2025-01.sql"
+  },
+  {
+    "period": "2025-02",
+    "outcome": "NOT_APPLICABLE",
+    "quality_score": 1,
+    "result": "results/demo-2025-02.md",
+    "sql": null,
+    "non_calc_class": "blank",
+    "notes": "metric not live in this period"
+  }
+]

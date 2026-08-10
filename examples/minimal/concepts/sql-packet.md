@@ -1,8 +1,8 @@
 ---
 okf_version: "0.2"
-odfw_version: "0.2.2"
+odwf_version: "0.2.2"
 type: warehouse-concept
-odfw_id: odfw:minimal:sql-packet:demo-count
+odwf_id: odwf:minimal:sql-packet:demo-count
 kind: sql-packet
 title: "Demo count packet"
 basis: bronze

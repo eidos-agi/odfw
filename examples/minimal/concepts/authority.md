@@ -1,8 +1,8 @@
 ---
 okf_version: "0.2"
-odfw_version: "0.2.2"
+odwf_version: "0.2.2"
 type: warehouse-concept
-odfw_id: odfw:minimal:authority:readonly
+odwf_id: odwf:minimal:authority:readonly
 kind: authority-boundary
 title: "Read only"
 allows: ["SELECT"]

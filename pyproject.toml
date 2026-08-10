@@ -4,13 +4,14 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "open-data-warehouse-format"
-version = "0.2.3"
+version = "0.2.5"
 description = "An additive OKF profile for warehouse topology, contracts, lineage, and proof"
 requires-python = ">=3.11"
 license = {text = "MIT"}
 
 [project.scripts]
+odwf-validate = "odwf.validate:main"
 odfw-validate = "odfw.validate:main"
 
 [tool.setuptools.packages.find]
-include = ["odfw*"]
+include = ["odwf*", "odfw*"]

@@ -1,8 +1,8 @@
 ---
 okf_version: "0.2"
-odfw_version: "0.2.2"
+odwf_version: "0.2.2"
 type: warehouse-concept
-odfw_id: odfw:minimal:data-contract:demo
+odwf_id: odwf:minimal:data-contract:demo
 kind: data-contract
 title: "Demo ODCS pin"
 standard: odcs
