@@ -9,6 +9,7 @@ status: implementing
 oracle: odwf:minimal:oracle:bronze
 layers: [odwf:minimal:layer:bronze]
 providers: [odwf:minimal:provider:source]
+ingestion_contracts: [odwf:minimal:ingestion-contract:source-bounded]
 hosts: [odwf:minimal:host:local]
 credential_plane: odwf:minimal:credential-plane:env
 authority: [odwf:minimal:authority:readonly]

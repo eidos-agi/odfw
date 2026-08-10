@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.2.6 — 2026-08-10
+
+- Add the `ingestion-contract` kind for source bounds, checkpoints, reconciliation, provider-scoped aggregate budgets, source-I/O path inventory, and enforcement proof
+- Require every provider in an `operating` pack to have a face-linked, enforced ingestion contract with observed acceptance evidence
+- Fail incremental contracts without checkpoint/overlap semantics and metered contracts whose projected usage exceeds their hard limit
+- Dogfood the language against Greenmark DD5's Sage full-scan overage failure
+
 ## 0.2.5 — 2026-08-10
 
 - Correct the canonical acronym to ODWF: Open Data Warehouse Format

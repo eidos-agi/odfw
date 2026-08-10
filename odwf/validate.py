@@ -53,6 +53,7 @@ KINDS = {
     "result",
     "data-contract",
     "connector",
+    "ingestion-contract",
 }
 CHECK_ENGINES = {
     "datacontract",
@@ -106,6 +107,12 @@ METRIC_KINDS = {
 INVENTORY_OUTCOMES = {"PASS", "FAIL", "NOT_APPLICABLE"}
 PLACEHOLDERS = {"tbd", "todo", "later", "unknown", "none", "n/a", "placeholder"}
 NON_AUTHORITATIVE_PLANES = {"catalog", "cache", "mcp", "dashboard"}
+INGESTION_MODES = {"incremental", "partitioned", "full", "none"}
+RECONCILIATION_MODES = {"full", "partitioned", "none"}
+INGESTION_CONTRACT_STATUSES = {"proposed", "observed", "enforced", "failed"}
+QUOTA_KINDS = {"metered", "rate-limited", "unmetered", "unknown"}
+GOVERNOR_MODES = {"enforce", "observe", "external", "none"}
+BILLING_UNIT_CONFIDENCE = {"unknown", "candidate", "reconciled"}
 ID_RE = re.compile(r"^(?:odwf|odfw):[a-z0-9][a-z0-9._-]*(?::[a-z0-9][a-z0-9._-]*){1,6}$")
 EXTERNAL_RE = re.compile(
     r"^(?P<profile>emf|orf|opf|okf):(?P<pack>[a-z0-9][a-z0-9._-]*):"
@@ -126,6 +133,7 @@ EDGE_TARGET_KINDS: dict[str, set[str]] = {
     "oracle": {"oracle"},
     "layers": {"layer"},
     "providers": {"provider"},
+    "provider": {"provider"},
     "hosts": {"host"},
     "credential_plane": {"credential-plane"},
     "authority": {"authority-boundary"},
@@ -167,6 +175,8 @@ EDGE_TARGET_KINDS: dict[str, set[str]] = {
     "data_contracts": {"data-contract"},
     "connector": {"connector"},
     "connectors": {"connector"},
+    "ingestion_contract": {"ingestion-contract"},
+    "ingestion_contracts": {"ingestion-contract"},
     "inputs": {"table", "schema", "exclusion-set", "entity-map", "seed", "answer-key", "workbook"},
 }
 REF_FIELDS = set(EDGE_TARGET_KINDS)
@@ -190,6 +200,7 @@ COMPOSITION_FIELDS = {
     "validation",
     "operational_proof",
     "freshness",
+    "ingestion_contracts",
 }
 CONTRACTING_REQUIRED = {
     "oracle",
@@ -357,6 +368,10 @@ def _is_placeholder(val: Any) -> bool:
     return False
 
 
+def _is_int_at_least(val: Any, minimum: int) -> bool:
+    return isinstance(val, int) and not isinstance(val, bool) and val >= minimum
+
+
 def _refs(val: Any) -> list[str]:
     out: list[str] = []
     for item in _as_list(val):
@@ -509,6 +524,7 @@ def validate_docs(
                 "entity-map": {"entity-map", "entity"},
                 "exclusion-set": {"exclusion-set", "exclusion"},
                 "metric-contract": {"metric-contract", "contract"},
+                "ingestion-contract": {"ingestion-contract", "ingestion"},
                 "answer-key": {"answer-key", "answerkey"},
             }
             tokens = set(str(odwf_id).split(":"))
@@ -623,6 +639,70 @@ def validate_docs(
             )
 
     if status == "operating":
+        contract_ids = _refs(fm.get("ingestion_contracts"))
+        if not contract_ids:
+            report.add(
+                "error",
+                "lifecycle.ingestion_contracts",
+                "operating packs require face ingestion_contracts",
+            )
+        covered_providers: set[str] = set()
+        provider_budget_signatures: dict[str, set[tuple[object, ...]]] = {}
+        for contract_id in contract_ids:
+            contract = by_id.get(contract_id)
+            if not contract or contract.meta.get("kind") != "ingestion-contract":
+                continue
+            covered_providers.update(_refs(contract.meta.get("provider")))
+            if contract.meta.get("quota_kind") in {"metered", "rate-limited"}:
+                signature = (
+                    contract.meta.get("governor_key"),
+                    contract.meta.get("billing_unit"),
+                    contract.meta.get("allowance_units"),
+                    contract.meta.get("hard_limit_units"),
+                    contract.meta.get("budget_period"),
+                    contract.meta.get("reset_timezone"),
+                )
+                for provider_id in _refs(contract.meta.get("provider")):
+                    provider_budget_signatures.setdefault(provider_id, set()).add(signature)
+            if contract.meta.get("contract_status") != "enforced":
+                report.add(
+                    "error",
+                    "lifecycle.ingestion.enforced",
+                    f"{contract.path.name}: operating contract_status must be enforced",
+                )
+            if contract.meta.get("governor_mode") not in {"enforce", "external"}:
+                report.add(
+                    "error",
+                    "lifecycle.ingestion.governor",
+                    f"{contract.path.name}: operating governor must enforce before source I/O",
+                )
+            observed_proof = any(
+                by_id.get(pid)
+                and by_id[pid].meta.get("kind") == "acceptance"
+                and by_id[pid].meta.get("status") == "observed"
+                for pid in _refs(contract.meta.get("proof"))
+            )
+            if not observed_proof:
+                report.add(
+                    "error",
+                    "lifecycle.ingestion.proof",
+                    f"{contract.path.name}: operating ingestion contract requires observed acceptance proof",
+                )
+        for provider_id in _refs(fm.get("providers")):
+            if provider_id not in covered_providers:
+                report.add(
+                    "error",
+                    "lifecycle.ingestion.coverage",
+                    f"operating provider {provider_id} has no face-linked ingestion contract",
+                )
+        for provider_id, signatures in provider_budget_signatures.items():
+            if len(signatures) > 1:
+                report.add(
+                    "error",
+                    "lifecycle.ingestion.aggregate_budget",
+                    f"operating provider {provider_id} contracts must share one aggregate budget and governor_key",
+                )
+
         # freshness concept reachable
         has_fresh = any(d.meta.get("kind") == "freshness" for d in docs)
         if not has_fresh:
@@ -778,6 +858,235 @@ def validate_docs(
                 )
             if _is_placeholder(doc.meta.get("server_id")) and eng in {"odcs-server", "datacontract"}:
                 report.add("error", "connector.server", f"{doc.path.name}: server_id required for odcs/datacontract")
+        if kind == "ingestion-contract":
+            meta = doc.meta
+            contract_status = meta.get("contract_status")
+            scheduled_mode = meta.get("scheduled_mode")
+            reconciliation_mode = meta.get("reconciliation_mode")
+            quota_kind = meta.get("quota_kind")
+            governor_mode = meta.get("governor_mode")
+
+            if contract_status not in INGESTION_CONTRACT_STATUSES:
+                report.add(
+                    "error",
+                    "ingestion.status",
+                    f"{doc.path.name}: contract_status must be one of {sorted(INGESTION_CONTRACT_STATUSES)}",
+                )
+            for field_name in (
+                "provider",
+                "pipeline",
+                "source_bound",
+                "reconciliation_strategy",
+                "override_policy",
+            ):
+                if _is_placeholder(meta.get(field_name)) or not meta.get(field_name):
+                    report.add(
+                        "error",
+                        "ingestion.required",
+                        f"{doc.path.name}: {field_name} required",
+                    )
+            source_io_paths = {
+                str(value).strip().lower()
+                for value in _as_list(meta.get("source_io_paths"))
+                if not _is_placeholder(value)
+            }
+            if not source_io_paths:
+                report.add(
+                    "error",
+                    "ingestion.source_io_paths",
+                    f"{doc.path.name}: source_io_paths must inventory every provider-I/O path",
+                )
+
+            scheduled = meta.get("scheduled")
+            if not isinstance(scheduled, bool):
+                report.add("error", "ingestion.scheduled", f"{doc.path.name}: scheduled must be true|false")
+            if scheduled_mode not in INGESTION_MODES:
+                report.add(
+                    "error",
+                    "ingestion.mode",
+                    f"{doc.path.name}: scheduled_mode must be one of {sorted(INGESTION_MODES)}",
+                )
+            if scheduled is True and (
+                scheduled_mode == "none"
+                or _is_placeholder(meta.get("schedule"))
+                or not meta.get("schedule")
+            ):
+                report.add(
+                    "error",
+                    "ingestion.schedule",
+                    f"{doc.path.name}: scheduled ingestion requires a non-none mode and schedule",
+                )
+            if scheduled is True and "scheduled" not in source_io_paths:
+                report.add(
+                    "error",
+                    "ingestion.source_io_paths",
+                    f"{doc.path.name}: scheduled contracts must include scheduled in source_io_paths",
+                )
+
+            if scheduled_mode in {"incremental", "partitioned"}:
+                checkpoint = str(meta.get("checkpoint_strategy", "")).strip().lower()
+                if not checkpoint or checkpoint in PLACEHOLDERS:
+                    report.add(
+                        "error",
+                        "ingestion.checkpoint",
+                        f"{doc.path.name}: {scheduled_mode} mode requires checkpoint_strategy",
+                    )
+            if scheduled_mode == "incremental":
+                overlap = str(meta.get("overlap_window", "")).strip().lower()
+                if not overlap or overlap in PLACEHOLDERS:
+                    report.add(
+                        "error",
+                        "ingestion.overlap",
+                        f"{doc.path.name}: incremental mode requires overlap_window",
+                    )
+
+            if reconciliation_mode not in RECONCILIATION_MODES:
+                report.add(
+                    "error",
+                    "ingestion.reconciliation_mode",
+                    f"{doc.path.name}: reconciliation_mode must be one of {sorted(RECONCILIATION_MODES)}",
+                )
+            if reconciliation_mode != "none":
+                if "reconciliation" not in source_io_paths:
+                    report.add(
+                        "error",
+                        "ingestion.source_io_paths",
+                        f"{doc.path.name}: reconciliation mode must include reconciliation in source_io_paths",
+                    )
+                for field_name in ("reconciliation_schedule", "deletion_strategy"):
+                    if _is_placeholder(meta.get(field_name)) or not meta.get(field_name):
+                        report.add(
+                            "error",
+                            "ingestion.reconciliation",
+                            f"{doc.path.name}: {reconciliation_mode} reconciliation requires {field_name}",
+                        )
+
+            if not _is_int_at_least(meta.get("max_units_per_run"), 1):
+                report.add(
+                    "error",
+                    "ingestion.max_units_per_run",
+                    f"{doc.path.name}: max_units_per_run must be a positive integer",
+                )
+            if scheduled is True and not _is_int_at_least(meta.get("estimated_units_per_period"), 1):
+                report.add(
+                    "error",
+                    "ingestion.estimated_units",
+                    f"{doc.path.name}: scheduled ingestion requires positive estimated_units_per_period",
+                )
+
+            if quota_kind not in QUOTA_KINDS:
+                report.add(
+                    "error",
+                    "ingestion.quota_kind",
+                    f"{doc.path.name}: quota_kind must be one of {sorted(QUOTA_KINDS)}",
+                )
+            if governor_mode not in GOVERNOR_MODES:
+                report.add(
+                    "error",
+                    "ingestion.governor_mode",
+                    f"{doc.path.name}: governor_mode must be one of {sorted(GOVERNOR_MODES)}",
+                )
+            if quota_kind in {"metered", "rate-limited"}:
+                if meta.get("budget_scope") != "provider":
+                    report.add(
+                        "error",
+                        "ingestion.budget_scope",
+                        f"{doc.path.name}: {quota_kind} budget_scope must be provider",
+                    )
+                if _is_placeholder(meta.get("governor_key")) or not meta.get("governor_key"):
+                    report.add(
+                        "error",
+                        "ingestion.governor_key",
+                        f"{doc.path.name}: {quota_kind} source requires shared provider governor_key",
+                    )
+                for field_name in ("billing_unit", "budget_period", "reset_timezone"):
+                    if _is_placeholder(meta.get(field_name)) or not meta.get(field_name):
+                        report.add(
+                            "error",
+                            "ingestion.quota_required",
+                            f"{doc.path.name}: {quota_kind} source requires {field_name}",
+                        )
+                confidence = meta.get("billing_unit_confidence")
+                if confidence not in BILLING_UNIT_CONFIDENCE:
+                    report.add(
+                        "error",
+                        "ingestion.billing_confidence",
+                        f"{doc.path.name}: billing_unit_confidence must be one of {sorted(BILLING_UNIT_CONFIDENCE)}",
+                    )
+                allowance = meta.get("allowance_units")
+                hard_limit = meta.get("hard_limit_units")
+                minimum_hard_limit = 0 if contract_status == "failed" else 1
+                if not _is_int_at_least(allowance, 1):
+                    report.add(
+                        "error",
+                        "ingestion.allowance",
+                        f"{doc.path.name}: allowance_units must be a positive integer",
+                    )
+                if not _is_int_at_least(hard_limit, minimum_hard_limit):
+                    report.add(
+                        "error",
+                        "ingestion.hard_limit",
+                        f"{doc.path.name}: hard_limit_units must be {'nonnegative' if contract_status == 'failed' else 'positive'}",
+                    )
+                if (
+                    _is_int_at_least(allowance, 1)
+                    and _is_int_at_least(hard_limit, 0)
+                    and hard_limit > allowance
+                ):
+                    report.add(
+                        "error",
+                        "ingestion.hard_limit",
+                        f"{doc.path.name}: hard_limit_units must not exceed allowance_units",
+                    )
+                estimate = meta.get("estimated_units_per_period")
+                if (
+                    contract_status != "failed"
+                    and scheduled is True
+                    and _is_int_at_least(estimate, 1)
+                    and _is_int_at_least(hard_limit, 1)
+                    and estimate > hard_limit
+                ):
+                    report.add(
+                        "error",
+                        "ingestion.period_budget",
+                        f"{doc.path.name}: estimated_units_per_period exceeds hard_limit_units",
+                    )
+
+            proofs = [by_id.get(pid) for pid in _refs(meta.get("proof"))]
+            if not proofs:
+                report.add(
+                    "error",
+                    "ingestion.proof",
+                    f"{doc.path.name}: proof acceptance required",
+                )
+            elif contract_status == "failed" and not any(
+                proof
+                and proof.meta.get("kind") == "acceptance"
+                and proof.meta.get("status") == "failed"
+                for proof in proofs
+            ):
+                report.add(
+                    "error",
+                    "ingestion.failed_proof",
+                    f"{doc.path.name}: failed contract requires failed acceptance proof",
+                )
+            elif contract_status == "enforced" and not any(
+                proof
+                and proof.meta.get("kind") == "acceptance"
+                and proof.meta.get("status") == "observed"
+                for proof in proofs
+            ):
+                report.add(
+                    "error",
+                    "ingestion.enforced_proof",
+                    f"{doc.path.name}: enforced contract requires observed acceptance proof",
+                )
+            if contract_status == "enforced" and governor_mode not in {"enforce", "external"}:
+                report.add(
+                    "error",
+                    "ingestion.enforcement",
+                    f"{doc.path.name}: enforced contract requires an enforcing governor",
+                )
         if kind == "test":
             has_steps = bool([s for s in _as_list(doc.meta.get("steps")) if not _is_placeholder(s)])
             has_packets = bool(_refs(doc.meta.get("sql_packets")) or _refs(doc.meta.get("sql_packet")))

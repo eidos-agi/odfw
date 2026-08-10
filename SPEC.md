@@ -1,4 +1,4 @@
-# ODWF v0.2.5 — Open Data Warehouse Format
+# ODWF v0.2.6 — Open Data Warehouse Format
 
 **An additive profile of OKF v0.2.** Every ODWF document preserves OKF provenance and trust. OKF renderers may ignore ODWF fields and still display the documents.
 
@@ -40,6 +40,7 @@ Each addition exists because a failure was felt or measured on real multi-vendor
 | Registry ships without values; MCP answers from an old substrate | Publish paths are explicit `publish-path` chains with freshness and plane-of-record |
 | "Shipped" without re-derivation proof | Acceptance for a metric requires a triangulation verdict with evidence pointers |
 | Periods without a calc left ambiguous (“missing” / silent skip) | Explicit non-calc classification on the cell result (§8a) |
+| Correct bronze hid an unbounded Sage extractor: whole tables were fetched four times daily, an observe-only governor was described as prevention, and provider overages continued | `ingestion-contract` makes acquisition mode, source bounds, checkpoints, reconciliation, provider-unit budgets, and pre-I/O enforcement mechanically visible; operating packs require enforced proof |
 
 ODWF is the place those rules become mechanical — so the next agent does not relearn them from a 180-line skill after another false green.
 
@@ -192,6 +193,7 @@ Allowed `kind` values:
 | `result` | Append-only observation of a test/check run |
 | `data-contract` | Pin to ODCS (or compatible) contract file + server id |
 | `connector` | Get-online adapter pin (odcs-server / datacontract / adbc / …) |
+| `ingestion-contract` | Provider/pipeline operating contract: scheduled mode and bounds, checkpoint/reconciliation behavior, provider budget, governor posture, and proof |
 
 IDs match `odwf:<warehouse>:<kind>:<slug>` (additional stable segments allowed), are unique in the validation closure, and **never change after publication**. A new interpretation gets a new ID and explicit `supersedes` / `superseded_by` (both edges, matching kinds, one live head).
 
@@ -208,6 +210,7 @@ Field names are edge types. The validator checks direction and target kind.
 | `oracle` | `oracle` |
 | `layers` | `layer` |
 | `providers` | `provider` |
+| `provider` | `provider` |
 | `hosts` | `host` |
 | `credential_plane` | `credential-plane` |
 | `authority` | `authority-boundary` |
@@ -229,6 +232,7 @@ Field names are edge types. The validator checks direction and target kind.
 | `schemas` | `schema` |
 | `pipeline` | `pipeline` |
 | `freshness` | `freshness` |
+| `ingestion_contract` / `ingestion_contracts` | `ingestion-contract` |
 | `lands_in` | `schema`, `table`, `layer` |
 | `reads_from` | `table`, `schema`, `layer`, `serving-plane` |
 | `writes_to` | `table`, `schema`, `layer`, `serving-plane` |
@@ -242,7 +246,7 @@ Only **composition edges** from the face and admitted structures make a document
 
 Composition fields from the face:
 
-`providers`, `layers`, `oracle`, `hosts`, `credential_plane`, `authority`, `serving_planes`, `publish_paths`, `first_slice`, `proof`, `validation`, `operational_proof`.
+`providers`, `layers`, `oracle`, `hosts`, `credential_plane`, `authority`, `serving_planes`, `publish_paths`, `first_slice`, `proof`, `validation`, `operational_proof`, `ingestion_contracts`.
 
 ---
 
@@ -526,6 +530,57 @@ An inventory that claims business-semantic completeness sets `claim_level: seman
 
 `odwf-validate --inventory` validates that semantic contract when `claim_level` is `semantic`. A structural-only v1 inventory remains valid for backward compatibility, but it does not claim that a cold reader can reconstruct classifications or outcome lineage from the inventory alone.
 
+### 8c. Ingestion operating contracts
+
+Correct bronze does not prove that acquiring bronze is safe, bounded, or affordable. ODWF does not execute an extractor, but it MUST make the extractor's operating commitments falsifiable.
+
+An `ingestion-contract` binds one provider to one pipeline and records both the routine scheduled path and its reconciliation safety net:
+
+```yaml
+kind: ingestion-contract
+provider: odwf:acme:provider:erp
+pipeline: odwf:acme:pipeline:erp-load
+source_io_paths: [scheduled, reconciliation, manual, backfill]
+contract_status: enforced       # proposed | observed | enforced | failed
+scheduled: true
+scheduled_mode: incremental     # incremental | partitioned | full | none
+schedule: "every six hours"
+source_bound: "modified_at in [checkpoint-overlap, run-start)"
+checkpoint_strategy: "advance atomically with the warehouse commit"
+overlap_window: "24 hours"
+reconciliation_mode: full       # full | partitioned | none
+reconciliation_schedule: manual
+reconciliation_strategy: "stage, compare keys/counts/checksums, then repair"
+deletion_strategy: "confirm missing keys before tombstoning"
+quota_kind: metered             # metered | rate-limited | unmetered | unknown
+budget_scope: provider
+governor_key: "erp-company-month"
+billing_unit: "provider API transaction"
+billing_unit_confidence: candidate  # unknown | candidate | reconciled
+allowance_units: 100000
+hard_limit_units: 80000
+budget_period: calendar-month
+reset_timezone: America/Chicago
+estimated_units_per_period: 12000
+max_units_per_run: 500
+governor_mode: enforce          # enforce | observe | external | none
+override_policy: "named, expiring approval below provider allowance"
+proof: [odwf:acme:acceptance:erp-ingestion-bounded]
+```
+
+Normative rules:
+
+1. A scheduled contract declares a non-`none` mode, schedule, explicit source bound, and positive maximum units per run and estimated units per budget period.
+2. Incremental mode declares a durable checkpoint strategy and overlap window. Partitioned mode declares its checkpoint/bound strategy. Destination `merge` alone is not an incremental source contract.
+3. Full or partitioned reconciliation declares its cadence, staging/comparison strategy, and deletion/tombstone strategy. One missing snapshot MUST NOT silently delete production data.
+4. Every contract inventories all source-I/O paths that can spend provider units, including scheduled, reconciliation, manual, and backfill paths when present. Scheduled and reconciliation modes MUST name their corresponding paths.
+5. Metered and rate-limited providers declare `budget_scope: provider`, a shared `governor_key`, billing unit, confidence, allowance, hard limit, budget/reset boundary, and forecast. The counter and refusal decision aggregate every source-I/O path and pipeline sharing that provider account. A non-failed contract's forecast MUST fit below its hard limit, and the hard limit MUST NOT exceed the provider allowance.
+6. `observe` is a truthful monitoring posture but never an enforcing posture. `contract_status: enforced` requires a pre-source-I/O enforcing or external governor and observed acceptance proof.
+7. `contract_status: failed` is valid evidence for a non-operating pack when linked to failed acceptance proof. This lets a pack describe a known unsafe current state without laundering it as operating.
+8. An `operating` face links every live source-I/O path through `ingestion_contracts`; every face provider is covered. Every linked contract is `enforced`, uses an enforcing governor, and carries observed acceptance proof for the same provider-level threshold.
+
+The validator checks the declaration and graph. External harnesses prove provider schema semantics, live request counts, billed-unit reconciliation, concurrency behavior, and that the governor blocks before network I/O.
+
 ---
 
 ## 9. Slices and first proof path
@@ -626,7 +681,8 @@ python3 -m odwf.validate --strict /path/to/private-warehouse-pack
 
 - Every document declares `okf_version: "0.2"` and `odwf_version` on the `0.2.x` line (`X.Y` MUST equal `okf_version`).
 - `index.md` uses `type: warehouse`; other ODWF documents use `type: warehouse-concept`.
-- Lifecycle, target-kind, oracle, first-slice, recipe-basis, acceptance, supersession, and parser gates pass.
+- Lifecycle, target-kind, oracle, first-slice, recipe-basis, ingestion-contract, acceptance, supersession, and parser gates pass.
+- An `operating` face covers every provider with an enforced ingestion contract, enforcing governor, and observed proof.
 - IDs are unique, internal references resolve, and every concept is reachable through directed composition edges.
 - Every document carries OKF `verified.by` and a nonempty `verified.method`.
 - Strict validation has no warnings.
@@ -665,6 +721,6 @@ Issue trackers execute work. dbt owns model SQL. Dagster owns run history. EMF o
 
 | | |
 |---|---|
-| Profile | ODWF **0.2.5** |
+| Profile | ODWF **0.2.6** |
 | Base | OKF **0.2** |
 | Status | Draft — sql-packet / check / test / result / workbook pins; private packs dogfood |

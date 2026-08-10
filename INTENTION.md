@@ -43,6 +43,7 @@ A private ODWF pack ships everything needed to re-run the prove path:
 - sql-packets / recipes  
 - seeds, entity-maps, exclusion-sets as needed  
 - checks, tests, append-only results  
+- ingestion contracts that bound scheduled source acquisition and provider spend
 
 **No runtime dependency** on any particular app (e.g. GreenmarkSheets).  
 Patterns may be **learned** from prior reconciles; the pack must not **couple** its identity or execution to those products.
@@ -72,6 +73,8 @@ Two sides only for the core claim. Falsifiable in one sentence:
 > For this **cell** (explorer facts @ workbook md5 + address/key), bronze re-derives the same number within tolerance — or the cell is **seed** / **NOT_DERIVABLE** with reason — and a **quality score** records how strong that claim is.
 
 No “gold is green,” no “the dashboard agreed,” no product-UI false green.
+
+Likewise, “bronze matches” is not an operating claim when the source pipeline is unbounded. ODWF does not run the extractor, but an operating pack must state and prove its extraction mode, checkpoint/reconciliation behavior, provider budget, and enforcing control before source I/O.
 
 ---
 

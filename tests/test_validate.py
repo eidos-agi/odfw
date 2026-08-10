@@ -29,6 +29,120 @@ class ValidateTests(unittest.TestCase):
     def test_minimal_example_strict(self) -> None:
         self.assertEqual(main(["--strict", str(EXAMPLE)]), 0)
 
+    def test_incremental_ingestion_requires_checkpoint_and_overlap(self) -> None:
+        with TemporaryDirectory() as tmp:
+            root = Path(tmp) / "pack"
+            copytree(EXAMPLE, root)
+            contract = root / "concepts" / "ingestion-contract.md"
+            text = contract.read_text(encoding="utf-8")
+            text = text.replace(
+                'checkpoint_strategy: "advance the durable checkpoint only with the warehouse commit"',
+                'checkpoint_strategy: "none"',
+            ).replace('overlap_window: "24 hours"', 'overlap_window: "none"')
+            contract.write_text(text, encoding="utf-8")
+            rules = {p.rule for p in validate_path(root, strict=True)[0].errors}
+            self.assertIn("ingestion.checkpoint", rules)
+            self.assertIn("ingestion.overlap", rules)
+
+    def test_metered_ingestion_estimate_must_fit_hard_limit(self) -> None:
+        with TemporaryDirectory() as tmp:
+            root = Path(tmp) / "pack"
+            copytree(EXAMPLE, root)
+            contract = root / "concepts" / "ingestion-contract.md"
+            text = contract.read_text(encoding="utf-8").replace(
+                "estimated_units_per_period: 100",
+                "estimated_units_per_period: 900",
+            )
+            contract.write_text(text, encoding="utf-8")
+            rules = {p.rule for p in validate_path(root, strict=True)[0].errors}
+            self.assertIn("ingestion.period_budget", rules)
+
+    def test_metered_ingestion_requires_provider_scope_and_path_inventory(self) -> None:
+        with TemporaryDirectory() as tmp:
+            root = Path(tmp) / "pack"
+            copytree(EXAMPLE, root)
+            contract = root / "concepts" / "ingestion-contract.md"
+            text = contract.read_text(encoding="utf-8")
+            text = text.replace("source_io_paths: [scheduled, reconciliation, manual]\n", "")
+            text = text.replace("budget_scope: provider\n", "")
+            contract.write_text(text, encoding="utf-8")
+            rules = {p.rule for p in validate_path(root, strict=True)[0].errors}
+            self.assertIn("ingestion.source_io_paths", rules)
+            self.assertIn("ingestion.budget_scope", rules)
+
+    def test_operating_pack_rejects_observe_only_governor(self) -> None:
+        with TemporaryDirectory() as tmp:
+            root = Path(tmp) / "pack"
+            copytree(EXAMPLE, root)
+            face = root / "index.md"
+            face.write_text(
+                face.read_text(encoding="utf-8").replace("status: implementing", "status: operating"),
+                encoding="utf-8",
+            )
+            contract = root / "concepts" / "ingestion-contract.md"
+            contract.write_text(
+                contract.read_text(encoding="utf-8").replace("governor_mode: enforce", "governor_mode: observe"),
+                encoding="utf-8",
+            )
+            rules = {p.rule for p in validate_path(root, strict=False)[0].errors}
+            self.assertIn("lifecycle.ingestion.governor", rules)
+            self.assertIn("ingestion.enforcement", rules)
+
+    def test_operating_pack_requires_contract_for_every_provider(self) -> None:
+        with TemporaryDirectory() as tmp:
+            root = Path(tmp) / "pack"
+            copytree(EXAMPLE, root)
+            face = root / "index.md"
+            text = face.read_text(encoding="utf-8")
+            text = text.replace("status: implementing", "status: operating")
+            text = text.replace(
+                "providers: [odwf:minimal:provider:source]",
+                "providers: [odwf:minimal:provider:source, odwf:minimal:provider:uncovered]",
+            )
+            face.write_text(text, encoding="utf-8")
+            provider = root / "concepts" / "provider-uncovered.md"
+            provider.write_text(
+                """---
+okf_version: "0.2"
+odwf_version: "0.2.6"
+type: warehouse-concept
+odwf_id: odwf:minimal:provider:uncovered
+kind: provider
+title: "Uncovered source"
+verified:
+  by: human:daniel
+  at: 2026-08-10
+  method: "coverage failure fixture"
+---
+""",
+                encoding="utf-8",
+            )
+            rules = {p.rule for p in validate_path(root, strict=False)[0].errors}
+            self.assertIn("lifecycle.ingestion.coverage", rules)
+
+    def test_operating_provider_contracts_share_one_aggregate_budget(self) -> None:
+        with TemporaryDirectory() as tmp:
+            root = Path(tmp) / "pack"
+            copytree(EXAMPLE, root)
+            face = root / "index.md"
+            text = face.read_text(encoding="utf-8")
+            text = text.replace("status: implementing", "status: operating")
+            text = text.replace(
+                "ingestion_contracts: [odwf:minimal:ingestion-contract:source-bounded]",
+                "ingestion_contracts: [odwf:minimal:ingestion-contract:source-bounded, odwf:minimal:ingestion-contract:second]",
+            )
+            face.write_text(text, encoding="utf-8")
+            first = root / "concepts" / "ingestion-contract.md"
+            second = root / "concepts" / "ingestion-contract-second.md"
+            text = first.read_text(encoding="utf-8")
+            text = text.replace(
+                "odwf:minimal:ingestion-contract:source-bounded",
+                "odwf:minimal:ingestion-contract:second",
+            ).replace('governor_key: "minimal-source-month"', 'governor_key: "separate-counter"')
+            second.write_text(text, encoding="utf-8")
+            rules = {p.rule for p in validate_path(root, strict=False)[0].errors}
+            self.assertIn("lifecycle.ingestion.aggregate_budget", rules)
+
     def test_legacy_odfw_names_remain_readable(self) -> None:
         with TemporaryDirectory() as tmp:
             root = Path(tmp) / "legacy"

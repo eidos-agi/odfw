@@ -5,6 +5,7 @@ type: warehouse-concept
 odwf_id: odwf:minimal:provider:source
 kind: provider
 title: "Demo source"
+pipeline: odwf:minimal:pipeline:source-load
 verified:
   by: human:daniel
   at: 2026-08-07

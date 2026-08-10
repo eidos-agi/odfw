@@ -23,6 +23,7 @@ Read **[INTENTION.md](INTENTION.md)** first. Summary:
 - Exclusion sets, entity maps, and **seeds** are first-class; never launder seeds as bronze.
 - Credentials never appear in pack documents — only `credential-plane` locators.
 - Serving planes declare what they are *not* authoritative for.
+- Source correctness is not enough: scheduled providers declare a face-linked `ingestion-contract` with extraction bounds, checkpoint/reconciliation semantics, all source-I/O paths, a provider-scoped aggregate budget, and enforcement proof. `observe` is not prevention.
 - Concepts atomic, IDs stable, directed composition membership.
 - Add fields only for observed failures; validator stdlib-only for gates.
 - **Prove loop (files only):** for source-complete workbook claims, first write `evidence/*-row-inventory.json` and run `python3 -m odwf.validate --inventory --strict .`; then write cell evidence under `results/` (+ `sql/` when calc) and a row `evidence/*-progress.json` covering the full prove window → run `python3 -m odwf.validate --progress .` (must exit 0) → run `python3 -m odwf.validate --strict .` before calling a pack published.

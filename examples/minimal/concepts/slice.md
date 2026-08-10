@@ -7,6 +7,8 @@ kind: slice
 title: "Demo slice"
 includes:
   - odwf:minimal:provider:source
+  - odwf:minimal:pipeline:source-load
+  - odwf:minimal:ingestion-contract:source-bounded
   - odwf:minimal:sql-packet:demo-count
   - odwf:minimal:check:demo
   - odwf:minimal:test:demo

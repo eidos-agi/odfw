@@ -8,6 +8,8 @@ EMF  — human intent and durable memory
 ORF  — research and findings
 OPF  — product commitments, UX, slices, and proof
 ODWF — spreadsheet → bronze proof packages (portable, fail-closed)
+
+ODWF also keeps acquisition honest: an operating pack links each provider to an `ingestion-contract` that proves scheduled source bounds, recovery/reconciliation semantics, and provider-budget enforcement. Correct bronze produced by an unbounded or unaffordable extractor is not operationally green.
 OPFF — personal finance packs (https://github.com/eidos-agi/opff; not warehouse proof)
 ```
 
@@ -40,7 +42,7 @@ python3 -m odwf.validate --inventory --strict /path/to/private-pack
 
 ## Status
 
-**v0.2.5 draft.** Schema and validator exist. Intention is spreadsheet→bronze packages (row-first chronological prove for sheet metrics — SPEC §8a) as AI compile input for later metrics stacks.
+**v0.2.6 draft.** Schema and validator exist. Intention is spreadsheet→bronze packages (row-first chronological prove for sheet metrics — SPEC §8a) as AI compile input for later metrics stacks.
 
 ## Install (optional)
 
