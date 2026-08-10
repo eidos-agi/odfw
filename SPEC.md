@@ -457,6 +457,49 @@ A **column** is one month across unrelated metrics: agents re-load source, defin
 
 Private packs apply this **prospectively** on new spreadsheet→bronze work and on the **active** proof path. Prior May-column or mixed-order results remain valid historical evidence unless a pack chooses to supersede them.
 
+### 8a.6 Progress fairness (file-checkable; `odfw-validate --progress`)
+
+When a pack claims row-first spreadsheet→bronze progress via **progress manifests**, the claim is fair only if the files show full-window coverage and honest evidence. This gate is **stdlib file inspection** — not live SQL and not a work-tracker.
+
+#### Progress files (pack-local)
+
+| File | Role |
+|---|---|
+| `evidence/prove-window.json` | Declares `period_start` and `period_end` as `YYYY-MM` (inclusive month range). Optional; default window is the union of periods listed across manifests when omitted. |
+| `evidence/*-progress.json` | One JSON **array** per logical metric row. Each element is one cell in the window. |
+
+#### Cell object (each array element)
+
+| Field | Required | Meaning |
+|---|---|---|
+| `period` | yes | `YYYY-MM` |
+| `outcome` | yes | Same enum as `result.outcome` (§8) |
+| `result` | yes | Pack-relative path to that cell’s result evidence file |
+| `sql` | when `outcome` is `PASS` or `FAIL` | Pack-relative path to SELECT packet body for that cell |
+| `quality_score` | recommended | Integer honesty score used by the pack (convention: match ≥8-class, mismatch &lt;8) |
+| `non_calc_class` | when outcome is non-calc | One of §8a non-calc classes |
+| `notes` | when non-calc | Short reason (same spirit as result `notes`) |
+
+#### Fairness rules (`--progress`)
+
+| Gate | Severity |
+|---|---|
+| At least one `evidence/*-progress.json` when `--progress` is invoked | **error** if absent (pending ≠ fair) |
+| Every period in the prove window appears in each `*-progress.json` | **error** (silent omit forbidden) |
+| Each cell `result` path is pack-relative, inside root, and exists | **error** |
+| `PASS` / `FAIL` cells have a pack-relative, in-root, existing `sql` path | **error** |
+| Absolute paths or `..` segments in evidence paths | **error** |
+| `outcome` ∈ allowed result outcomes | **error** |
+| Non-calc outcome without `non_calc_class` | **error** |
+| `FAIL` with `quality_score` ≥ 8 | **error** (quality inflation) |
+| `PASS` with `quality_score` present and not 8 | **error** under this convention |
+
+**Path rule:** `result` and `sql` values MUST be pack-relative paths that resolve **inside** the pack root. Absolute paths and `..` traversal are **errors**. Existence of a file outside the pack does not satisfy fairness.
+
+**Out of scope for this gate (non-normative):** work-tracker cards, Linear, issue IDs, live warehouse queries, dual-writing every cell as a `kind: result` concept. Trackers may exist; they must not replace progress files or result/sql evidence.
+
+If no `evidence/*-progress.json` exists, `--progress` is an **error** (`progress.absent`): nothing to score is **pending/absent**, not fair progress.
+
 ---
 
 ## 9. Slices and first proof path

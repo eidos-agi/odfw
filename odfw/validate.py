@@ -1,4 +1,4 @@
-"""Validate Open Data Warehouse Format v0.2.2 documents and packs.
+"""Validate Open Data Warehouse Format v0.2.x documents and packs.
 
 Stdlib only. The parser accepts the deliberately small YAML subset ODFW specifies
 and fails closed on syntax it cannot represent faithfully.
@@ -944,6 +944,235 @@ def _check_first_slice(slice_doc: Doc, by_id: dict[str, Doc], report: Report) ->
 # --- CLI / selftest ---
 
 
+
+# --- Progress fairness (SPEC §8a.6) ---
+
+PERIOD_RE = re.compile(r"^\d{4}-\d{2}$")
+
+
+def _month_range(start: str, end: str) -> list[str]:
+    """Inclusive YYYY-MM range."""
+    ys, ms = int(start[:4]), int(start[5:7])
+    ye, me = int(end[:4]), int(end[5:7])
+    out: list[str] = []
+    y, m = ys, ms
+    while (y, m) <= (ye, me):
+        out.append(f"{y:04d}-{m:02d}")
+        m += 1
+        if m > 12:
+            m = 1
+            y += 1
+    return out
+
+
+def _load_json(path: Path) -> Any:
+    import json
+
+    return json.loads(path.read_text(encoding="utf-8"))
+
+
+def _resolve_pack_path(root: Path, rel: str) -> tuple[str | None, Path | None]:
+    """Resolve a pack-relative evidence path.
+
+    Returns (error_detail, resolved_path). error_detail set if the path is not
+    allowed (absolute, ``..`` traversal, or escapes pack root). resolved_path is
+    set when the path is pack-relative and stays under root (file need not exist).
+    """
+    if not isinstance(rel, str) or not rel or _is_placeholder(rel):
+        return "path required", None
+    p = Path(rel)
+    if p.is_absolute():
+        return f"absolute path forbidden: {rel}", None
+    if ".." in p.parts:
+        return f"path escapes pack via ..: {rel}", None
+    root_res = root.resolve()
+    cand = (root_res / rel).resolve()
+    try:
+        cand.relative_to(root_res)
+    except ValueError:
+        return f"path escapes pack root: {rel}", None
+    return None, cand
+
+
+def validate_progress(root: Path) -> Report:
+    """File-only progress fairness. No live SQL. Stdlib only."""
+    import json
+
+    report = Report(path=root)
+    if not root.is_dir():
+        report.add("error", "progress.root", "progress validation requires a pack directory")
+        return report
+
+    evidence = root / "evidence"
+    manifests = sorted(evidence.glob("*-progress.json")) if evidence.is_dir() else []
+    if not manifests:
+        # Explicit --progress with nothing to score is pending/absent, not fair.
+        report.add(
+            "error",
+            "progress.absent",
+            "no evidence/*-progress.json — progress claim pending/absent, not fair",
+        )
+        return report
+
+    window: list[str] | None = None
+    win_path = evidence / "prove-window.json"
+    if win_path.is_file():
+        try:
+            win = _load_json(win_path)
+        except (OSError, json.JSONDecodeError) as e:
+            report.add("error", "progress.window.json", f"prove-window.json: {e}")
+            return report
+        if not isinstance(win, dict):
+            report.add("error", "progress.window.shape", "prove-window.json must be an object")
+            return report
+        ps, pe = win.get("period_start"), win.get("period_end")
+        if not (isinstance(ps, str) and PERIOD_RE.match(ps) and isinstance(pe, str) and PERIOD_RE.match(pe)):
+            report.add(
+                "error",
+                "progress.window.fields",
+                "prove-window.json requires period_start and period_end as YYYY-MM",
+            )
+            return report
+        if (int(ps[:4]), int(ps[5:7])) > (int(pe[:4]), int(pe[5:7])):
+            report.add("error", "progress.window.order", "period_start must be <= period_end")
+            return report
+        window = _month_range(ps, pe)
+
+    for man_path in manifests:
+        try:
+            cells = _load_json(man_path)
+        except (OSError, json.JSONDecodeError) as e:
+            report.add("error", "progress.manifest.json", f"{man_path.name}: {e}")
+            continue
+        if not isinstance(cells, list):
+            report.add("error", "progress.manifest.shape", f"{man_path.name}: must be a JSON array")
+            continue
+
+        by_period: dict[str, dict[str, Any]] = {}
+        for i, cell in enumerate(cells):
+            if not isinstance(cell, dict):
+                report.add("error", "progress.cell.shape", f"{man_path.name}[{i}]: cell must be object")
+                continue
+            period = cell.get("period")
+            if not isinstance(period, str) or not PERIOD_RE.match(period):
+                report.add(
+                    "error",
+                    "progress.cell.period",
+                    f"{man_path.name}[{i}]: period must be YYYY-MM",
+                )
+                continue
+            if period in by_period:
+                report.add(
+                    "error",
+                    "progress.cell.duplicate",
+                    f"{man_path.name}: duplicate period {period}",
+                )
+            by_period[period] = cell
+
+            outcome = cell.get("outcome")
+            if outcome not in RESULT_OUTCOMES:
+                report.add(
+                    "error",
+                    "progress.cell.outcome",
+                    f"{man_path.name} {period}: outcome must be one of result outcomes",
+                )
+
+            result_rel = cell.get("result")
+            err, resolved = _resolve_pack_path(root, result_rel if isinstance(result_rel, str) else "")
+            if err and (not isinstance(result_rel, str) or not result_rel or _is_placeholder(result_rel)):
+                report.add(
+                    "error",
+                    "progress.evidence.result",
+                    f"{man_path.name} {period}: result path required",
+                )
+            elif err:
+                report.add(
+                    "error",
+                    "progress.evidence.path",
+                    f"{man_path.name} {period}: result {err}",
+                )
+            elif resolved is not None and not resolved.is_file():
+                report.add(
+                    "error",
+                    "progress.evidence.result",
+                    f"{man_path.name} {period}: missing result file {result_rel}",
+                )
+
+            sql_rel = cell.get("sql")
+            if outcome in {"PASS", "FAIL"}:
+                if not isinstance(sql_rel, str) or not sql_rel or _is_placeholder(sql_rel):
+                    report.add(
+                        "error",
+                        "progress.evidence.sql",
+                        f"{man_path.name} {period}: PASS/FAIL requires sql path",
+                    )
+                else:
+                    serr, sresolved = _resolve_pack_path(root, sql_rel)
+                    if serr:
+                        report.add(
+                            "error",
+                            "progress.evidence.path",
+                            f"{man_path.name} {period}: sql {serr}",
+                        )
+                    elif sresolved is not None and not sresolved.is_file():
+                        report.add(
+                            "error",
+                            "progress.evidence.sql",
+                            f"{man_path.name} {period}: missing sql file {sql_rel}",
+                        )
+
+            if outcome in NON_CALC_OUTCOMES:
+                ncc = cell.get("non_calc_class")
+                if ncc not in NON_CALC_CLASSES:
+                    report.add(
+                        "error",
+                        "progress.non_calc_class",
+                        f"{man_path.name} {period}: non-calc outcome requires non_calc_class",
+                    )
+
+            q = cell.get("quality_score")
+            if q is not None:
+                try:
+                    qi = int(q)
+                except (TypeError, ValueError):
+                    report.add(
+                        "error",
+                        "progress.quality",
+                        f"{man_path.name} {period}: quality_score must be int",
+                    )
+                    continue
+                if outcome == "FAIL" and qi >= 8:
+                    report.add(
+                        "error",
+                        "progress.quality.inflation",
+                        f"{man_path.name} {period}: FAIL quality_score {qi} >= 8",
+                    )
+                if outcome == "PASS" and qi != 8:
+                    report.add(
+                        "error",
+                        "progress.quality.honest",
+                        f"{man_path.name} {period}: PASS quality_score {qi} (expected 8)",
+                    )
+
+        # window coverage
+        expected = window
+        if expected is None:
+            if by_period:
+                periods_sorted = sorted(by_period)
+                expected = _month_range(periods_sorted[0], periods_sorted[-1])
+            else:
+                expected = []
+        missing = [p for p in expected if p not in by_period]
+        if missing:
+            report.add(
+                "error",
+                "progress.coverage",
+                f"{man_path.name}: silent omit periods {missing}",
+            )
+
+    return report
+
+
 def format_report(report: Report) -> str:
     lines = [f"{report.path}:"]
     if not report.problems:
@@ -1110,6 +1339,11 @@ def main(argv: list[str] | None = None) -> int:
     p = argparse.ArgumentParser(prog="odfw-validate", description="Validate ODFW packs")
     p.add_argument("paths", nargs="*", type=Path, help="pack dirs or markdown files")
     p.add_argument("--strict", action="store_true", help="warnings become errors; require imports")
+    p.add_argument(
+        "--progress",
+        action="store_true",
+        help="progress fairness only (SPEC §8a.6): full-window coverage + evidence paths",
+    )
     p.add_argument("--selftest", action="store_true", help="run built-in fixture checks")
     args = p.parse_args(argv)
 
@@ -1123,6 +1357,16 @@ def main(argv: list[str] | None = None) -> int:
         if not path.exists():
             print(f"{path}: ERROR path.missing: not found")
             exit_code = 1
+            continue
+        if args.progress:
+            report = validate_progress(path if path.is_dir() else path.parent)
+            if args.strict:
+                for prob in list(report.problems):
+                    if prob.level == "warn":
+                        prob.level = "error"
+            print(format_report(report))
+            if report.errors:
+                exit_code = 1
             continue
         for report in validate_path(path, strict=args.strict):
             print(format_report(report))
