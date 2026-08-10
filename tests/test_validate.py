@@ -230,10 +230,15 @@ verified:
                             "comparison_tolerance": 0,
                             "source_class": "bronze",
                             "non_calc_class": None,
+                            "result_path": "evidence/result.md",
+                            "query_path": "sql/query.sql",
                         }
                     ],
                 }
             )
+            (root / "evidence" / "result.md").write_text("result\n", encoding="utf-8")
+            (root / "sql").mkdir()
+            (root / "sql" / "query.sql").write_text("select 7\n", encoding="utf-8")
             path.write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8")
             self.assertEqual(main(["--inventory", "--strict", str(root)]), 0)
 

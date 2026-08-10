@@ -1463,6 +1463,14 @@ def validate_row_inventory(root: Path) -> Report:
                                 "inventory.semantic.source_class",
                                 f"{item_location}: source_class must have a semantic definition",
                             )
+                        result_path = item.get("result_path")
+                        path_error, resolved = _resolve_pack_path(root, result_path)
+                        if path_error or resolved is None or not resolved.is_file():
+                            report.add(
+                                "error",
+                                "inventory.semantic.result_path",
+                                f"{item_location}: result_path invalid or missing: {path_error or result_path}",
+                            )
                         if outcome in {"PASS", "FAIL"}:
                             actual_calc_sources.add(source_class)
                             delta = item.get("delta")
@@ -1480,6 +1488,14 @@ def validate_row_inventory(root: Path) -> Report:
                                     "error",
                                     "inventory.semantic.tolerance",
                                     f"{item_location}: nonnegative numeric comparison_tolerance required",
+                                )
+                            query_path = item.get("query_path")
+                            query_error, query_resolved = _resolve_pack_path(root, query_path)
+                            if query_error or query_resolved is None or not query_resolved.is_file():
+                                report.add(
+                                    "error",
+                                    "inventory.semantic.query_path",
+                                    f"{item_location}: query_path invalid or missing: {query_error or query_path}",
                                 )
                             if isinstance(delta, (int, float)) and isinstance(tolerance, (int, float)):
                                 expected_pass = abs(delta) <= tolerance
@@ -1505,6 +1521,12 @@ def validate_row_inventory(root: Path) -> Report:
                                     "error",
                                     "inventory.semantic.non_calc_comparison",
                                     f"{item_location}: NOT_APPLICABLE requires comparison_basis=not_applicable and null tolerance",
+                                )
+                            if item.get("query_path") is not None:
+                                report.add(
+                                    "error",
+                                    "inventory.semantic.non_calc_query",
+                                    f"{item_location}: NOT_APPLICABLE query_path must be null",
                                 )
                             non_calc_class = item.get("non_calc_class")
                             if not isinstance(non_calc_class, str) or not non_calc_class.strip():
