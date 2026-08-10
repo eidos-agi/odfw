@@ -1,6 +1,6 @@
 # Open Data Warehouse Format
 
-ODFW is an additive OKF profile for **spreadsheet → bronze** proof packages — not a warehouse engine, credentials store, or metrics UI.
+ODWF is an additive OKF profile for **spreadsheet → bronze** proof packages — not a warehouse engine, credentials store, or metrics UI.
 
 ## Intention
 
@@ -25,7 +25,7 @@ Read **[INTENTION.md](INTENTION.md)** first. Summary:
 - Serving planes declare what they are *not* authoritative for.
 - Concepts atomic, IDs stable, directed composition membership.
 - Add fields only for observed failures; validator stdlib-only for gates.
-- **Prove loop (files only):** write cell evidence under `results/` (+ `sql/` when calc) and a row `evidence/*-progress.json` covering the full prove window → run `python3 -m odfw.validate --progress .` (must exit 0) → run `python3 -m odfw.validate --strict .` before calling a pack published.
+- **Prove loop (files only):** for source-complete workbook claims, first write `evidence/*-row-inventory.json` and run `python3 -m odwf.validate --inventory --strict .`; then write cell evidence under `results/` (+ `sql/` when calc) and a row `evidence/*-progress.json` covering the full prove window → run `python3 -m odwf.validate --progress .` (must exit 0) → run `python3 -m odwf.validate --strict .` before calling a pack published.
 - Progress fairness (SPEC §8a.6): no silent omitted periods; result path every cell; sql path on PASS/FAIL; non-calc classified; no FAIL@≥8 quality inflation.
 - External work trackers (issues/boards) are **optional and non-normative** — they do not replace progress files or structural validate.
 - **Never commit private warehouse packs here.**

@@ -16,10 +16,11 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
-      - name: ODFW gates
+      - name: ODWF gates
         run: |
           set -euo pipefail
-          python3 -m odfw.validate --selftest
-          python3 -m odfw.validate --progress examples/row-progress
+          python3 -m odwf.validate --selftest
+          python3 -m odwf.validate --progress examples/row-progress
+          python3 -m odwf.validate --strict examples/minimal
           python3 -m odfw.validate --strict examples/minimal
           PYTHONPATH=. python3 -m unittest discover -s tests -p 'test_*.py'

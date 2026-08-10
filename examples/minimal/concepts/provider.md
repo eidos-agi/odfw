@@ -1,8 +1,8 @@
 ---
 okf_version: "0.2"
-odfw_version: "0.2.2"
+odwf_version: "0.2.2"
 type: warehouse-concept
-odfw_id: odfw:minimal:provider:source
+odwf_id: odwf:minimal:provider:source
 kind: provider
 title: "Demo source"
 verified:

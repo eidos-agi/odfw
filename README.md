@@ -1,13 +1,13 @@
 # Open Data Warehouse Format
 
-ODFW is an additive profile of OKF v0.2 for **self-contained packages that prove an original spreadsheet against bronze warehouse data**.
+ODWF is an additive profile of OKF v0.2 for **self-contained packages that prove an original spreadsheet against bronze warehouse data**.
 
 ```text
 OKF  — knowledge and trust
 EMF  — human intent and durable memory
 ORF  — research and findings
 OPF  — product commitments, UX, slices, and proof
-ODFW — spreadsheet → bronze proof packages (portable, fail-closed)
+ODWF — spreadsheet → bronze proof packages (portable, fail-closed)
 OPFF — personal finance packs (https://github.com/eidos-agi/opff; not warehouse proof)
 ```
 
@@ -24,8 +24,9 @@ OPFF — personal finance packs (https://github.com/eidos-agi/opff; not warehous
 Mechanical rules: [SPEC.md](SPEC.md). Language roadmap: [V1.md](V1.md). Connectors/DQ compose: [TESTING-AND-CONNECTORS.md](TESTING-AND-CONNECTORS.md). Fixture: [examples/minimal](examples/minimal).
 
 ```bash
-python3 -m odfw.validate --selftest
-python3 -m odfw.validate --strict examples/minimal
+python3 -m odwf.validate --selftest
+python3 -m odwf.validate --strict examples/minimal
+python3 -m odwf.validate --inventory --strict /path/to/private-pack
 ```
 
 ## Public vs private packs
@@ -39,12 +40,16 @@ python3 -m odfw.validate --strict examples/minimal
 
 ## Status
 
-**v0.2.3+ draft.** Schema and validator exist. Intention is spreadsheet→bronze packages (row-first chronological prove for sheet metrics — SPEC §8a) as AI compile input for later metrics stacks.
+**v0.2.5 draft.** Schema and validator exist. Intention is spreadsheet→bronze packages (row-first chronological prove for sheet metrics — SPEC §8a) as AI compile input for later metrics stacks.
 
 ## Install (optional)
 
 ```bash
-cd path/to/odfw
+cd path/to/odwf
 pip install -e .
-odfw-validate --selftest
+odwf-validate --selftest
 ```
+
+New packs use `odwf_version`, `odwf_id`, `odwf:` IDs, and the `odwf-row-inventory-v1`
+schema. The former `odfw` Python package, CLI, fields, IDs, and inventory schema remain
+read-compatible so published pack identities do not have to change.

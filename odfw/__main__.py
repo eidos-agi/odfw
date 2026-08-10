@@ -1,5 +1,5 @@
-"""python3 -m odfw validates ODFW packs."""
+"""Compatibility entry point for ``python -m odfw``."""
 
-from .validate import main
+from odwf.validate import main
 
 raise SystemExit(main())

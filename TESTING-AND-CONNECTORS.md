@@ -1,7 +1,7 @@
-# ODFW testing frameworks & connectors
+# ODWF testing frameworks & connectors
 
-**Status:** design target for ODFW ≥ 0.3 / v1 complete  
-**Principle:** compose battle-tested open tools; ODFW owns the **tree, pins, and proof**, not a new DQ engine or ELT platform.
+**Status:** design target for ODWF ≥ 0.3 / v1 complete
+**Principle:** compose battle-tested open tools; ODWF owns the **tree, pins, and proof**, not a new DQ engine or ELT platform.
 
 ---
 
@@ -14,13 +14,13 @@ A warehouse proof package without:
 
 …is still a document. Agents re-implement probes. Months return.
 
-ODFW must make “get online + run checks” a **standard path**, not a skill file.
+ODWF must make “get online + run checks” a **standard path**, not a skill file.
 
 ---
 
 ## 2. Decision (defaults)
 
-| Concern | Adopt (in the wild) | ODFW role |
+| Concern | Adopt (in the wild) | ODWF role |
 |---|---|---|
 | **Data contract + quality tests** | **[Open Data Contract Standard (ODCS)](https://bitol-io.github.io/open-data-contract-standard/)** + **[datacontract CLI](https://cli.datacontract.com/)** | Pack pins ODCS files; `check`/`test`/`result` bind to `datacontract test` outcomes |
 | **SQL / multi-engine execution** | **Ibis** (what datacontract-cli uses today) / dialect SQL via sqlglot | Do not reimplement |
@@ -33,12 +33,12 @@ ODFW must make “get online + run checks” a **standard path**, not a skill fi
 **Default prove path for Cerebro-class packs:**
 
 ```text
-odfw-validate --strict .
+odwf-validate --strict .
 datacontract test contracts/<metric-or-table>.odcs.yaml   # uses servers: + quality
-# map CLI exit + JSON report → ODFW result concept (append-only)
+# map CLI exit + JSON report → ODWF result concept (append-only)
 ```
 
-Do **not** invent “ODFW-CL” as a quality language. ODCS quality library + SQL checks already cover rowCount, nulls, freshness, custom SQL.
+Do **not** invent “ODWF-CL” as a quality language. ODCS quality library + SQL checks already cover rowCount, nulls, freshness, custom SQL.
 
 ---
 
@@ -52,7 +52,7 @@ Do **not** invent “ODFW-CL” as a quality language. ODCS quality library + SQ
 - Ecosystem: export to dbt / GX when needed; Bitol governance.  
 - 2026 reality: datacontract-cli moved execution toward **Ibis** (multi-backend), which is the right “universal SQL adapter” layer.
 
-**Great Expectations** and **Soda** remain first-class *optional* engines for packs that already standardize on them. ODFW does not pick a religious war; it picks a **default** (ODCS) and stable bind points.
+**Great Expectations** and **Soda** remain first-class *optional* engines for packs that already standardize on them. ODWF does not pick a religious war; it picks a **default** (ODCS) and stable bind points.
 
 **dbt tests** remain the transform-layer runner for teams living in dbt — packs can `engine: dbt` and pin `dbt test --select …` as the test procedure.
 
@@ -74,13 +74,13 @@ servers:
 
 That is enough to go online for SELECT checks in minutes once vault/env is injected.
 
-For **broader extract** (SaaS → bronze), reuse **Singer** (simple, many taps) or **Airbyte** (catalog + CDK) — ODFW `provider` + `pipeline` concepts **link** to a tap/source id; they do not redefine the protocol.
+For **broader extract** (SaaS → bronze), reuse **Singer** (simple, many taps) or **Airbyte** (catalog + CDK) — ODWF `provider` + `pipeline` concepts **link** to a tap/source id; they do not redefine the protocol.
 
 **ADBC / Arrow** is the long-term “one client, many DBs” story for agents running packets; document as preferred runtime when available, with SQLAlchemy/psycopg as Cerebro today.
 
 ---
 
-## 4. How this hangs on the ODFW tree
+## 4. How this hangs on the ODWF tree
 
 ```text
 warehouse face
@@ -89,12 +89,12 @@ warehouse face
 ├── providers / layers / tables
 ├── contracts/                     # ODCS YAML (or symlink)
 │     └── revenue-lob.odcs.yaml
-├── sql/                           # ODFW sql-packets (named SELECT bodies)
-├── checks/                        # ODFW check concepts
+├── sql/                           # ODWF sql-packets (named SELECT bodies)
+├── checks/                        # ODWF check concepts
 │     engine: datacontract         # or gx | dbt | soda | sql-packet
 │     binds: contracts/revenue-lob.odcs.yaml
 ├── tests/
-│     steps: [odfw-validate, datacontract test …, map report]
+│     steps: [odwf-validate, datacontract test …, map report]
 └── results/                       # append-only; include engine report digest
 ```
 
@@ -123,23 +123,23 @@ Validator (stdlib): resolve pins, forbid secrets, require engine ∈ allowlist.
 | Local parquet/CSV | DuckDB / ODCS file server | same CLI |
 | Excel answer-key | eidos-spreadsheet-explorer | row/vector peer, not ODCS schema alone |
 | SaaS API → bronze | Singer tap / Airbyte source | pipeline concept only |
-| Custom SQL packet | ODFW `sql-packet` + psycopg/ADBC | triangulation harness |
+| Custom SQL packet | ODWF `sql-packet` + psycopg/ADBC | triangulation harness |
 
 **Cerebro first path:** Postgres ODCS server + sql-packet for bronze re-derive + explorer for key.
 
 ---
 
-## 6. Mapping existing ODFW checks
+## 6. Mapping existing ODWF checks
 
-Today’s ODFW `check` / `test` / `result` stay. They become **orchestration and proof**, not the quality DSL.
+Today’s ODWF `check` / `test` / `result` stay. They become **orchestration and proof**, not the quality DSL.
 
-| ODFW object | External artifact |
+| ODWF object | External artifact |
 |---|---|
 | `metric-contract` | May generate or pin an ODCS contract for the series grain |
 | `sql-packet` | Custom SQL quality / re-derive (ODCS `type: sql` quality or harness) |
 | `check` | One engine invocation + peer list (bronze/gold/key) |
 | `test` | Ordered runners: validate → contract test → packet → append result |
-| `result` | Engine report + ODFW outcome enum |
+| `result` | Engine report + ODWF outcome enum |
 
 Triangulation (bronze ↔ gold ↔ workbook) may need a **thin harness** (Python) that:
 
@@ -149,16 +149,16 @@ Triangulation (bronze ↔ gold ↔ workbook) may need a **thin harness** (Python
 4. Compares vectors under tolerance  
 5. Emits `result`
 
-That harness is package-local or `odfw-harness` — still not a new quality language.
+That harness is package-local or `odwf-harness` — still not a new quality language.
 
 ---
 
 ## 7. What we will not build
 
-- A proprietary ODFW quality language competing with ODCS/SodaCL/GX  
+- A proprietary ODWF quality language competing with ODCS/SodaCL/GX
 - A new ELT connector CDK (use Singer/Airbyte)  
 - Embedding passwords in contracts  
-- Making `odfw-validate` execute live SQL (keep stdlib gate separate from harness)
+- Making `odwf-validate` execute live SQL (keep stdlib gate separate from harness)
 
 ---
 
@@ -175,7 +175,7 @@ That harness is package-local or `odfw-harness` — still not a new quality lang
 
 ## 9. Success criteria
 
-- New machine: install `odfw` + `datacontract-cli` + inject env → **one command** fails or passes against live Postgres.  
+- New machine: install `odwf` + `datacontract-cli` + inject env → **one command** fails or passes against live Postgres.
 - No new quality dialect to learn beyond ODCS + existing sql-packets.  
 - Connectors for “get online” are **copy-paste server YAML + env**, not a research project.  
 - Excel and warehouse stay dual-plane (explorer + ODCS/SQL).

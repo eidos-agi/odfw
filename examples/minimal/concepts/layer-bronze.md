@@ -1,8 +1,8 @@
 ---
 okf_version: "0.2"
-odfw_version: "0.2.2"
+odwf_version: "0.2.2"
 type: warehouse-concept
-odfw_id: odfw:minimal:layer:bronze
+odwf_id: odwf:minimal:layer:bronze
 kind: layer
 title: "Bronze"
 layer_name: bronze

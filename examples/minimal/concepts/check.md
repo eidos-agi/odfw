@@ -1,11 +1,11 @@
 ---
 okf_version: "0.2"
-odfw_version: "0.2.2"
+odwf_version: "0.2.2"
 type: warehouse-concept
-odfw_id: odfw:minimal:check:demo
+odwf_id: odwf:minimal:check:demo
 kind: check
 title: "Demo check"
-sql_packet: odfw:minimal:sql-packet:demo-count
+sql_packet: odwf:minimal:sql-packet:demo-count
 compare: vector
 tolerance:
   mode: absolute
