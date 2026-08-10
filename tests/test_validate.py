@@ -226,6 +226,8 @@ verified:
                             "delta": 0,
                             "outcome": "PASS",
                             "comparison_rule": "exact numeric equality",
+                            "comparison_basis": "bronze",
+                            "comparison_tolerance": 0,
                             "source_class": "bronze",
                             "non_calc_class": None,
                         }

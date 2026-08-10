@@ -1465,9 +1465,47 @@ def validate_row_inventory(root: Path) -> Report:
                             )
                         if outcome in {"PASS", "FAIL"}:
                             actual_calc_sources.add(source_class)
-                            if not isinstance(item.get("delta"), (int, float)):
+                            delta = item.get("delta")
+                            tolerance = item.get("comparison_tolerance")
+                            if item.get("comparison_basis") != source_class:
+                                report.add(
+                                    "error",
+                                    "inventory.semantic.comparison_basis",
+                                    f"{item_location}: comparison_basis must equal source_class",
+                                )
+                            if not isinstance(delta, (int, float)):
                                 report.add("error", "inventory.semantic.delta", f"{item_location}: numeric delta required")
+                            if not isinstance(tolerance, (int, float)) or tolerance < 0:
+                                report.add(
+                                    "error",
+                                    "inventory.semantic.tolerance",
+                                    f"{item_location}: nonnegative numeric comparison_tolerance required",
+                                )
+                            if isinstance(delta, (int, float)) and isinstance(tolerance, (int, float)):
+                                expected_pass = abs(delta) <= tolerance
+                                if (outcome == "PASS") != expected_pass:
+                                    report.add(
+                                        "error",
+                                        "inventory.semantic.comparison_result",
+                                        f"{item_location}: {outcome} contradicts delta {delta} and tolerance {tolerance}",
+                                    )
+                            sheet_value = item.get("sheet_value")
+                            reference_value = item.get("reference_value")
+                            if isinstance(sheet_value, (int, float)) and isinstance(reference_value, (int, float)) and isinstance(delta, (int, float)):
+                                computed_delta = abs(sheet_value - reference_value)
+                                if abs(abs(delta) - computed_delta) > 1e-9:
+                                    report.add(
+                                        "error",
+                                        "inventory.semantic.delta_reconcile",
+                                        f"{item_location}: delta does not equal abs(sheet_value-reference_value)",
+                                    )
                         else:
+                            if item.get("comparison_basis") != "not_applicable" or item.get("comparison_tolerance") is not None:
+                                report.add(
+                                    "error",
+                                    "inventory.semantic.non_calc_comparison",
+                                    f"{item_location}: NOT_APPLICABLE requires comparison_basis=not_applicable and null tolerance",
+                                )
                             non_calc_class = item.get("non_calc_class")
                             if not isinstance(non_calc_class, str) or not non_calc_class.strip():
                                 report.add(
