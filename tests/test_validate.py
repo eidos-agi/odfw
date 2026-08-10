@@ -189,6 +189,56 @@ verified:
             self._write_row_inventory(root)
             self.assertEqual(main(["--inventory", "--strict", str(root)]), 0)
 
+    def test_semantic_row_inventory_reconciles_embedded_evidence(self) -> None:
+        with TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            path = self._write_row_inventory(root)
+            data = json.loads(path.read_text(encoding="utf-8"))
+            data["claim_level"] = "semantic"
+            data["semantic_contract"] = {
+                "schema_version": "odwf-row-semantics-v1",
+                "period_window": {"columns": {"C": "2025-01"}},
+                "row_role_rules": {"title": "first row", "header": "month heading", "metric": "period value"},
+                "metric_kind_rules": {"source": "source measure"},
+                "source_class_definitions": {"bronze": "warehouse oracle"},
+                "outcome_definitions": {
+                    "PASS": "within comparison rule",
+                    "FAIL": "outside comparison rule",
+                    "NOT_APPLICABLE": "no calculation required",
+                },
+            }
+            data["rows"][0]["row_role_rule"] = "title"
+            data["rows"][1]["row_role_rule"] = "header"
+            metric = data["rows"][2]
+            metric.update(
+                {
+                    "row_role_rule": "metric",
+                    "metric_kind_rule": "source",
+                    "source_classes": ["bronze"],
+                    "outcomes": {"PASS": 1},
+                    "lineage": {"calculation_source_classes": ["bronze"], "non_calc_classes": []},
+                    "outcome_evidence": [
+                        {
+                            "period": "2025-01",
+                            "a1": "C3",
+                            "sheet_value": 7,
+                            "reference_value": 7,
+                            "delta": 0,
+                            "outcome": "PASS",
+                            "comparison_rule": "exact numeric equality",
+                            "source_class": "bronze",
+                            "non_calc_class": None,
+                        }
+                    ],
+                }
+            )
+            path.write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8")
+            self.assertEqual(main(["--inventory", "--strict", str(root)]), 0)
+
+            data["rows"][2]["outcomes"] = {"FAIL": 1}
+            path.write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8")
+            self.assertEqual(main(["--inventory", str(root)]), 1)
+
     def test_legacy_odfw_inventory_schema_remains_readable(self) -> None:
         with TemporaryDirectory() as tmp:
             root = Path(tmp)

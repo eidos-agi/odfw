@@ -522,6 +522,10 @@ Allowed structural roles are `blank`, `title`, `section_header`, `column_header`
 
 This gate does not parse XLSX and does not replace the workbook pin. A producer (spreadsheet explorer or a private harness) creates the inventory from the pinned source; a cold validator can then prove the package is internally source-complete.
 
+An inventory that claims business-semantic completeness sets `claim_level: semantic` and embeds a `semantic_contract` with `schema_version: odwf-row-semantics-v1`. The contract defines the assessed period-to-column map, row-role and metric-kind rule IDs, source classes, and outcome meanings. Every row names its applied role rule; every metric also names its metric-kind rule and carries one `outcome_evidence` record per assessed period. Each record embeds its period, cell address, sheet/reference values, delta, outcome, comparison rule, calculation source or non-calc class. Row-level outcome counts and lineage summaries MUST reconcile to those embedded records. Historical denominator mistakes MAY be retained separately as historical evidence, but MUST NOT appear as current metric outcome evidence.
+
+`odwf-validate --inventory` validates that semantic contract when `claim_level` is `semantic`. A structural-only v1 inventory remains valid for backward compatibility, but it does not claim that a cold reader can reconstruct classifications or outcome lineage from the inventory alone.
+
 ---
 
 ## 9. Slices and first proof path

@@ -53,3 +53,7 @@ odwf-validate --selftest
 New packs use `odwf_version`, `odwf_id`, `odwf:` IDs, and the `odwf-row-inventory-v1`
 schema. The former `odfw` Python package, CLI, fields, IDs, and inventory schema remain
 read-compatible so published pack identities do not have to change.
+
+Row inventories may set `claim_level: semantic` and embed an `odwf-row-semantics-v1`
+contract; `odwf-validate --inventory` then reconciles every row rule, period outcome,
+comparison rule, and lineage summary without opening the workbook.

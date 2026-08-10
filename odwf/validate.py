@@ -93,6 +93,7 @@ NON_CALC_CLASSES = {
 NON_CALC_OUTCOMES = {"NOT_APPLICABLE", "SOURCE_ONLY", "CARRIED_STRUCTURAL"}
 ROW_INVENTORY_SCHEMA = "odwf-row-inventory-v1"
 LEGACY_ROW_INVENTORY_SCHEMA = "odfw-row-inventory-v1"
+ROW_SEMANTICS_SCHEMA = "odwf-row-semantics-v1"
 ROW_ROLES = {"blank", "title", "section_header", "column_header", "note", "metric", "unknown"}
 METRIC_KINDS = {
     "source_input",
@@ -102,6 +103,7 @@ METRIC_KINDS = {
     "variance_change",
     "unclear",
 }
+INVENTORY_OUTCOMES = {"PASS", "FAIL", "NOT_APPLICABLE"}
 PLACEHOLDERS = {"tbd", "todo", "later", "unknown", "none", "n/a", "placeholder"}
 NON_AUTHORITATIVE_PLANES = {"catalog", "cache", "mcp", "dashboard"}
 ID_RE = re.compile(r"^(?:odwf|odfw):[a-z0-9][a-z0-9._-]*(?::[a-z0-9][a-z0-9._-]*){1,6}$")
@@ -1249,6 +1251,62 @@ def validate_row_inventory(root: Path) -> Report:
             report.add("error", "inventory.counts", f"{path.name}: counts object required")
             counts = {}
 
+        claim_level = data.get("claim_level", "structural")
+        if claim_level not in {"structural", "semantic"}:
+            report.add("error", "inventory.claim_level", f"{path.name}: claim_level must be structural or semantic")
+        semantic_contract = data.get("semantic_contract")
+        semantic = claim_level == "semantic"
+        period_columns: dict[str, str] = {}
+        role_rules: set[str] = set()
+        kind_rules: set[str] = set()
+        source_class_defs: set[str] = set()
+        if semantic:
+            if not isinstance(semantic_contract, dict):
+                report.add("error", "inventory.semantic.contract", f"{path.name}: semantic_contract object required")
+                semantic_contract = {}
+            if semantic_contract.get("schema_version") != ROW_SEMANTICS_SCHEMA:
+                report.add(
+                    "error",
+                    "inventory.semantic.schema",
+                    f"{path.name}: semantic_contract.schema_version must be {ROW_SEMANTICS_SCHEMA!r}",
+                )
+            period_window = semantic_contract.get("period_window")
+            columns = period_window.get("columns") if isinstance(period_window, dict) else None
+            if not isinstance(columns, dict) or not columns:
+                report.add("error", "inventory.semantic.periods", f"{path.name}: semantic period column map required")
+            else:
+                period_columns = {str(column): str(period) for column, period in columns.items()}
+                if len(period_columns) != len(set(period_columns.values())):
+                    report.add("error", "inventory.semantic.periods", f"{path.name}: semantic periods must be unique")
+                for column, period in period_columns.items():
+                    if not re.fullmatch(r"[A-Z]+", column) or not re.fullmatch(r"\d{4}-\d{2}", period):
+                        report.add(
+                            "error",
+                            "inventory.semantic.periods",
+                            f"{path.name}: invalid semantic period mapping {column!r}: {period!r}",
+                        )
+            for field_name, target in (
+                ("row_role_rules", role_rules),
+                ("metric_kind_rules", kind_rules),
+                ("source_class_definitions", source_class_defs),
+            ):
+                definitions = semantic_contract.get(field_name)
+                if not isinstance(definitions, dict) or not definitions:
+                    report.add(
+                        "error",
+                        f"inventory.semantic.{field_name}",
+                        f"{path.name}: semantic_contract.{field_name} definitions required",
+                    )
+                else:
+                    target.update(str(key) for key in definitions)
+            outcome_definitions = semantic_contract.get("outcome_definitions")
+            if not isinstance(outcome_definitions, dict) or not INVENTORY_OUTCOMES <= set(outcome_definitions):
+                report.add(
+                    "error",
+                    "inventory.semantic.outcomes",
+                    f"{path.name}: definitions required for {sorted(INVENTORY_OUTCOMES)}",
+                )
+
         physical_rows = counts.get("physical_rows")
         metric_rows = counts.get("metric_rows")
         if not isinstance(physical_rows, int) or physical_rows < 1:
@@ -1303,6 +1361,12 @@ def validate_row_inventory(root: Path) -> Report:
             basis = row.get("classification_basis")
             if not isinstance(basis, str) or not basis.strip():
                 report.add("error", "inventory.row.basis", f"{location}: classification_basis required")
+            if semantic and row.get("row_role_rule") not in role_rules:
+                report.add(
+                    "error",
+                    "inventory.semantic.row_rule",
+                    f"{path.name} row {sheet_row}: row_role_rule must name a declared rule",
+                )
 
             included = row.get("included_in_metric_denominator")
             if not isinstance(included, bool) or included != (role == "metric"):
@@ -1331,12 +1395,115 @@ def validate_row_inventory(root: Path) -> Report:
                     report.add("error", "inventory.metric.id", f"{path.name}: duplicate metric_id {metric_id}")
                 else:
                     seen_metric_ids.add(metric_id)
+                if semantic and row.get("metric_kind_rule") not in kind_rules:
+                    report.add(
+                        "error",
+                        "inventory.semantic.metric_rule",
+                        f"{path.name} row {sheet_row}: metric_kind_rule must name a declared rule",
+                    )
             elif metric_kind is not None or metric_id is not None:
                 report.add(
                     "error",
                     "inventory.metric.nonmetric",
                     f"{path.name} row {sheet_row}: non-metric rows cannot carry metric_id or metric_kind",
                 )
+
+            if semantic:
+                evidence_rows = row.get("outcome_evidence", [])
+                declared_outcomes = row.get("outcomes", {})
+                lineage = row.get("lineage", {})
+                if role != "metric":
+                    if evidence_rows or declared_outcomes or row.get("source_classes"):
+                        report.add(
+                            "error",
+                            "inventory.semantic.nonmetric_evidence",
+                            f"{path.name} row {sheet_row}: current outcome evidence is metric-only",
+                        )
+                elif not isinstance(evidence_rows, list) or len(evidence_rows) != len(period_columns):
+                    report.add(
+                        "error",
+                        "inventory.semantic.evidence_count",
+                        f"{path.name} row {sheet_row}: one outcome_evidence record required per semantic period",
+                    )
+                else:
+                    actual_outcomes: Counter[str] = Counter()
+                    actual_calc_sources: set[str] = set()
+                    actual_non_calc: set[str] = set()
+                    seen_periods: set[str] = set()
+                    expected_by_period = {period: column for column, period in period_columns.items()}
+                    for evidence_index, item in enumerate(evidence_rows):
+                        item_location = f"{location} outcome_evidence[{evidence_index}]"
+                        if not isinstance(item, dict):
+                            report.add("error", "inventory.semantic.evidence", f"{item_location}: must be an object")
+                            continue
+                        period = item.get("period")
+                        if period not in expected_by_period or period in seen_periods:
+                            report.add("error", "inventory.semantic.period", f"{item_location}: bad or duplicate period {period!r}")
+                        else:
+                            seen_periods.add(period)
+                            expected_a1 = f"{expected_by_period[period]}{sheet_row}"
+                            if item.get("a1") != expected_a1:
+                                report.add(
+                                    "error",
+                                    "inventory.semantic.a1",
+                                    f"{item_location}: a1 must be {expected_a1}",
+                                )
+                        outcome = item.get("outcome")
+                        if outcome not in INVENTORY_OUTCOMES:
+                            report.add("error", "inventory.semantic.outcome", f"{item_location}: invalid outcome {outcome!r}")
+                            continue
+                        actual_outcomes[outcome] += 1
+                        comparison_rule = item.get("comparison_rule")
+                        if not isinstance(comparison_rule, str) or not comparison_rule.strip():
+                            report.add("error", "inventory.semantic.comparison", f"{item_location}: comparison_rule required")
+                        source_class = item.get("source_class")
+                        if source_class not in source_class_defs:
+                            report.add(
+                                "error",
+                                "inventory.semantic.source_class",
+                                f"{item_location}: source_class must have a semantic definition",
+                            )
+                        if outcome in {"PASS", "FAIL"}:
+                            actual_calc_sources.add(source_class)
+                            if not isinstance(item.get("delta"), (int, float)):
+                                report.add("error", "inventory.semantic.delta", f"{item_location}: numeric delta required")
+                        else:
+                            non_calc_class = item.get("non_calc_class")
+                            if not isinstance(non_calc_class, str) or not non_calc_class.strip():
+                                report.add(
+                                    "error",
+                                    "inventory.semantic.non_calc",
+                                    f"{item_location}: non_calc_class required for NOT_APPLICABLE",
+                                )
+                            else:
+                                actual_non_calc.add(non_calc_class)
+                    normalized_outcomes = (
+                        {str(key): value for key, value in declared_outcomes.items() if value}
+                        if isinstance(declared_outcomes, dict)
+                        else None
+                    )
+                    if normalized_outcomes != dict(sorted(actual_outcomes.items())):
+                        report.add(
+                            "error",
+                            "inventory.semantic.outcome_counts",
+                            f"{path.name} row {sheet_row}: outcomes do not reconcile with embedded evidence",
+                        )
+                    expected_lineage = {
+                        "calculation_source_classes": sorted(actual_calc_sources),
+                        "non_calc_classes": sorted(actual_non_calc),
+                    }
+                    if row.get("source_classes") != expected_lineage["calculation_source_classes"]:
+                        report.add(
+                            "error",
+                            "inventory.semantic.source_classes",
+                            f"{path.name} row {sheet_row}: source_classes do not reconcile with embedded evidence",
+                        )
+                    if lineage != expected_lineage:
+                        report.add(
+                            "error",
+                            "inventory.semantic.lineage",
+                            f"{path.name} row {sheet_row}: lineage does not reconcile; actual={expected_lineage}",
+                        )
 
             cells = row.get("cells")
             if not isinstance(cells, list):
